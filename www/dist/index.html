@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Montura — Control (dev)</title>
+    <style>body {
+    font-family: Inter, system-ui, Arial;
+    margin: 0;
+    padding: 0;
+    background: #0f1720;
+    color: #e6eef8
+}
+
+.app {
+    max-width: 900px;
+    margin: 24px auto;
+    padding: 20px
+}
+
+.panel {
+    background: #0b1220;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 6px 18px rgba(2, 6, 23, .6)
+}
+
+h1 {
+    margin: 0 0 8px 0;
+    font-size: 20px
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    align-items: center
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:1fr 1fr;
+    gap: 12px
+}
+
+button {
+    background: #1f2937;
+    color: #e6eef8;
+    border: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer
+}
+
+.big {
+    padding: 16px;
+    font-size: 18px
+}
+
+.dir-grid {
+    display: grid;
+    grid-template-columns:60px 60px 60px;
+    grid-template-rows:60px 60px 60px;
+    justify-content: center;
+    align-items: center
+}
+
+.dir-grid button {
+    width: 56px;
+    height: 56px
+}
+
+select, input {
+    background: #071027;
+    color: #e6eef8;
+    border: 1px solid #21303d;
+    padding: 8px;
+    border-radius: 8px
+}
+
+.status {
+    font-weight: 600
+}
+
+footer {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 12px
+}
+</style>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body>
+<div class="app" x-data="mountApp()">
+    <div class="panel">
+        <div class="row">
+            <h1>Montura — Control</h1>
+            <div style="flex:1"></div>
+            <div class="status">Estado: <span x-text="statusText"></span></div>
+        </div>
+        <div style="margin-top:8px">RA: <span x-text="status.ra"></span> &nbsp; DEC: <span x-text="status.dec"></span>
+        </div>
+        <div style="margin-top:8px">Tracking: <span x-text="serverTracking"></span></div>
+        <div style="margin-top:8px">Lat: <span x-text="settings.lat"></span> • Lon: <span x-text="settings.lon"></span>
+            •
+            Elev: <span x-text="settings.elevation"></span>m
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <div class="row"><strong>Acciones</strong></div>
+            <div style="margin-top:8px" class="row">
+                <button @click="stop()">STOP</button>
+                <button @click="home()">HOME</button>
+                <button @click="park()">PARK</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="row"><strong>Tracking</strong></div>
+            <div style="margin-top:8px" class="row">
+                <select x-model.number="selectedTracking">
+                    <template x-for="(m, i) in trackingOptions" :key="i">
+                        <option :value="i" x-text="m"></option>
+                    </template>
+                </select>
+                <button @click="setTracking()">Set</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top:8px">
+        <div class="row"><strong>Manual Slew</strong></div>
+        <div style="margin-top:8px" class="row">
+            <div class="dir-grid">
+                <div></div>
+                <button @click="slew('ra', 1)">▲</button>
+                <div></div>
+                <button @click="slew('dec', -1)">◀</button>
+                <div style="display:flex;align-items:center;justify-content:center">
+                    <select x-model.number="speed">
+                        <template x-for="(s, i) in speedOptions" :key="i">
+                            <option :value="s" x-text="s"></option>
+                        </template>
+                    </select>
+                </div>
+                <button @click="slew('dec', 1)">▶</button>
+                <div></div>
+                <button @click="slew('ra', -1)">▼</button>
+                <div></div>
+            </div>
+        </div>
+        <div style="margin-top:8px" class="row">
+            <label style="margin-right:8px">Grados:</label>
+            <input type="number" min="1" max="90" x-model.number="degrees" style="width:70px" />
+            <span style="margin-left:8px;font-size:0.85em;color:#666">1&ndash;90</span>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top:8px" x-show="wifiAp">
+        <div class="row"><strong>Configuración Wi-Fi</strong></div>
+        <div style="margin-top:8px" class="row">
+            <input placeholder="SSID" x-model="wifi.ssid" />
+            <input placeholder="Password" x-model="wifi.password" type="password" />
+            <button @click="fetch('/api/wifi-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ssid: wifi.ssid, password: wifi.password})}).then(() => fetchStatus())">Configurar</button>
+        </div>
+        <div style="margin-top:8px;color:#a00">La red no está configurada. Conectar ahora para salir del modo AP.</div>
+    </div>
+
+    <footer>SPA embebida — llamadas REST a <code>/api/*</code></footer>
+</div>
+
+<script>function mountApp() {
+    return {
+        status: {ra: '--:--:--', dec: '--:--:--'},
+        statusText: 'UNKNOWN',
+        settings: {lat: 0, lon: 0, elevation: 0},
+        speed: 1,
+        speedOptions: [1, 2, 3, 4],
+        degrees: 5,
+        wifi: {ssid: '', password: ''},
+        // Current tracking mode reported by the device.
+        serverTracking: 'none',
+        wifiAp: false,
+        // Selected tracking mode index for the control.
+        selectedTracking: null,
+        trackingOptions: ['none', 'sidereal', 'lunar', 'solar'],
+
+        fetchStatus() {
+            fetch('/api/status').then(r => r.json()).then(j => {
+                this.statusText = j.status || 'UNKNOWN';
+                this.status = {ra: j.ra || '--:--:--', dec: j.dec || '--:--:--'};
+                this.settings = j.settings || {lat: 0, lon: 0, elevation: 0};
+                this.serverTracking = j.tracking || 'none';
+                this.wifiAp = j.wifi_ap || false;
+                // Initialize the select once so polling does not overwrite user input.
+                if (this.selectedTracking === null) {
+                    const idx = this.trackingOptions.indexOf(j.tracking);
+                    this.selectedTracking = idx >= 0 ? idx : 0;
+                }
+            }).catch(() => {
+            });
+        },
+
+        stop() {
+            fetch('/api/stop', {method: 'POST'}).then(() => this.fetchStatus());
+        },
+        home() {
+            fetch('/api/home', {method: 'POST'}).then(() => this.fetchStatus());
+        },
+        park() {
+            fetch('/api/park', {method: 'POST'}).then(() => this.fetchStatus());
+        },
+
+        setTracking() {
+            fetch('/api/tracking', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tracking: this.trackingOptions[this.selectedTracking]})
+            }).then(() => this.fetchStatus());
+        },
+
+        slew(axis, dir) {
+            const axisName = axis === 'ra' ? 'ra' : 'dec';
+            const deg = Math.min(90, Math.max(1, Math.round(Math.abs(this.degrees))));
+            fetch('/api/move-axis', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({axis: axisName, degrees: dir * deg, speed: this.speed})
+            }).then(() => this.fetchStatus());
+        },
+
+        init() {
+            this.fetchStatus();
+            setInterval(() => this.fetchStatus(), 1000);
+        }
+    }
+}
+
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const root = document.querySelector('[x-data]');
+        if (root && root.__x) root.__x.$data.init();
+    }, 500);
+});
+</script>
+</body>
+
+</html>

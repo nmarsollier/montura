@@ -1,0 +1,17 @@
+#pragma once
+
+#include "mount.h"
+
+#include <stdint.h>
+
+/* Internal mount state stored by the mount module. */
+extern MountSettings mount_internal_state;
+
+MountResult mount_result_ok(const char *message);
+
+MountResult mount_result_error(const char *message);
+
+/* NVS helpers used to persist mount settings. */
+void mount_settings_storage_load(MountSettings *out_settings);
+
+void mount_settings_storage_save(const MountSettings *settings);

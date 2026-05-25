@@ -1,0 +1,88 @@
+@baseUrl = http://localhost:8080
+
+### Root / Screen
+GET {{baseUrl}}/
+
+GET {{baseUrl}}/api/screen  # alias of /
+
+### Status
+GET {{baseUrl}}/api/status
+
+# Response example (RA as HH:MM:SS.ss, DEC as ±DD:MM:SS.ss)
+```
+{
+  "status": "ready",
+  "tracking": "sidereal",
+  "ra": "12:20:42.00",
+  "dec": "-32:07:12.00",
+  "settings": {
+    "lat": -32.890800,
+    "lon": -68.827200,
+    "elevation": 750
+  }
+}
+```
+
+### Tracking
+POST {{baseUrl}}/api/tracking
+Content-Type: application/json
+
+{
+  "tracking": "sidereal"    # one of: "none","manual","sidereal","lunar","solar"
+}
+
+### Goto
+POST {{baseUrl}}/api/goto
+Content-Type: application/json
+
+{
+  "ra": 10.234,
+  "dec": -20.123,
+  "speed": 2
+}
+
+### Stop
+POST {{baseUrl}}/api/stop
+
+### Park
+POST {{baseUrl}}/api/park
+
+### Unpark
+POST {{baseUrl}}/api/unpark
+
+### Sync
+POST {{baseUrl}}/api/sync
+Content-Type: application/json
+
+{
+  "ra": 10.234,
+  "dec": -20.123
+}
+
+### Move Axis
+POST {{baseUrl}}/api/move-axis
+Content-Type: application/json
+
+{
+  "axis": "ra",      # "ra" or "dec"
+  "degrees": 15.0,
+  "speed": 2
+}
+
+### Settings
+POST {{baseUrl}}/api/settings
+Content-Type: application/json
+
+{
+  "time": "2026-05-28T10:00:00-03:00",
+  "lat": -32.8908,
+  "lon": -68.8272,
+  "elevation": 750
+}
+
+### Command responses
+All command endpoints return the standard command result JSON:
+```
+{"ok": true, "message": "..."}
+```
+On rejection the HTTP status is `409 Conflict` with `{"ok": false, "message": "reason"}`

@@ -1,0 +1,19 @@
+{
+  "allowWithoutPrompt": [
+    "readFile",
+    "readCurrentlyOpenFile",
+    "searchFile",
+    "listDirectory",
+    "terminal",
+    "viewDiff"
+  ],
+  "rules": [
+    "El codigo fuente en disco es la unica fuente de verdad.",
+    "Sigue la arquitectura de capas: REST -> Mount -> Motors -> TMC.",
+    "No hardcodear configuracion de microsteps. Usar la API del modulo TMC.",
+    "Un archivo .c por caso de uso dentro de cada modulo.",
+    "snake_case para funciones y variables, UPPER_CASE para macros.",
+    "#pragma once en todos los headers.",
+    "static en funciones privadas del modulo."
+  ]
+}

@@ -1,0 +1,73 @@
+# Reglas de Desarrollo del Proyecto Montura
+
+Mantener este archivo en formato simple, para que pueda leerse y editarse rapidamente
+
+## Definicion del proyecto
+
+- Logica para manejar montura ecuatorial DIY simple
+- Utiliza un modulo ESP32 IdeasPark https://manuals.plus/asin/B0CN4F354N
+- Utiliza 2 TMC2209 de BT https://global.bttwiki.com/TMC2209.html
+- Utiliza 2 motores paso a paso Nema17 con las siguientes caracteristicas: Low Noise:15N.cm(21oz.in) holding torque, drive voltage 12V/ 24V, rated current 1.4A, resistance 3.5ohms
+- Utiliza 2 poleas 20 dientes en el motor, 80 dientes en el eje de rotacion
+- La montura posee 2 botones fisicos, Stop y Home
+- Posee una pantalla minimalista OLED de 0.98 inch, se muestra verticalmente
+
+## Arquitectura
+
+Capas del sistema, de afuera hacia adentro:
+
+```
+Cliente Web (Alpine.js) → REST API → Mount (orquestacion) → Motors → TMC2209 (hardware)
+```
+
+- **www/** — UI Web embebida programada con Alpine.js. Compila con `node www/build.js`, genera `www/dist/`.
+- **REST API** (`main/rest/`) — Expone endpoints HTTP para control de la montura.
+- **Mount** (`main/mount/`) — Orquestacion logica del montaje: estado, coordenadas, sincronizacion.
+- **Runtime** (`main/runtime/`) — Inicializacion y ciclo de vida del sistema.
+- **Motors** (`main/motors/`) — Control de motores de alto nivel.
+- **Motors Motion** (`main/motors_motion/`) — Ejecucion hardware: generacion de pulsos STEP/DIR.
+- **TMC** (`main/tmc/`) — Driver TMC2209 via UART. Unica fuente de verdad para configuracion de microsteps.
+- **Buttons** (`main/buttons/`) — Manejo de botones fisicos.
+- **Screen** (`main/screen/`) — Manejo de pantalla OLED.
+- **Network** (`main/network/`) — Conectividad WiFi.
+- **Tools** (`main/tools/`) — Utilidades transversales (parser, validacion).
+
+## Reglas generales
+
+- Nunca hacer commit o push a github sin autorizacion explicita
+- Commits solo cuando la feature completa este verificada y compilando
+- Siempre basarse en codigo desde el disco como unica fuente de verdad. El codigo fuente es la unica referencia valida para entender detalles de implementacion
+- Antes de cualquier cambio leer el estado actual del archivo a modificar
+- Proyecto programado en C, siguiendo estilo funcional cuando sea posible
+- Modulos separados por dominio, cada dominio en una carpeta dentro de `main/`
+- Cada dominio expone:
+  - `dominio.h` — API publica (funciones que otros modulos pueden llamar)
+  - `dominio_internal.h` — API interna (funciones compartidas solo entre archivos del mismo modulo)
+- Un archivo `.c` por caso de uso dentro de cada modulo
+- Las funciones publicas comienzan con el nombre del modulo, seguido de `_`
+- Las variables de estado de un modulo nunca se acceden directamente desde afuera. Solo a traves de funciones publicas del modulo
+- Respetar principios: DRY - YAGNI - KISS
+- La documentacion en headers describe el problema de negocio o caso de uso que resuelve la funcion, no los detalles de implementacion
+- Solo comentar codigo si es complejo de comprender para un humano
+- El codigo y sus comentarios dentro de archivos con extension .c y .h se escriben en ingles
+- Archivos markdown .md se escriben en idioma español
+- Los tags de comentarios deben definirse como constante y su valor es el mismo nombre del archivo en mayuscular y sin la extension .c
+
+## Convenciones de Codigo
+
+- **Lenguaje**: C (no C++)
+- **snake_case** para funciones y variables
+- **UPPER_CASE** para macros y defines
+- **Headers**: `#pragma once`, includes organizados: primeros los propios del modulo, luego librerias del framework
+- **Logging**: usar `ESP_LOGI()`, `ESP_LOGW()`, `ESP_LOGE()` con tag estatico por archivo
+- **Resultados entre capas**: usar los tipos `MotorResultCode` y `MountResult` definidos en el proyecto
+
+## Relaciones entre modulos (dependencias)
+
+- REST API puede llamar a Mount y Network
+- Mount puede llamar a Motors
+- Motors puede llamar a Motors Motion
+- Motors Motion puede llamar a TMC
+- TMC no depende de ningun otro modulo del proyecto (solo del framework ESP-IDF)
+- Buttons y Screen son autocontenidos y pueden llamar a Mount
+- Tools es transversal: no depende de modulos de dominio ni es dependido por ellos

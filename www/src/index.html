@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Montura — Control (dev)</title>
+    <!--INLINE_CSS-->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body>
+<div class="app" x-data="mountApp()">
+    <div class="panel">
+        <div class="row">
+            <h1>Montura — Control</h1>
+            <div style="flex:1"></div>
+            <div class="status">Estado: <span x-text="statusText"></span></div>
+        </div>
+        <div style="margin-top:8px">RA: <span x-text="status.ra"></span> &nbsp; DEC: <span x-text="status.dec"></span>
+        </div>
+        <div style="margin-top:8px">Tracking: <span x-text="serverTracking"></span></div>
+        <div style="margin-top:8px">Lat: <span x-text="settings.lat"></span> • Lon: <span x-text="settings.lon"></span>
+            •
+            Elev: <span x-text="settings.elevation"></span>m
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <div class="row"><strong>Acciones</strong></div>
+            <div style="margin-top:8px" class="row">
+                <button @click="stop()">STOP</button>
+                <button @click="home()">HOME</button>
+                <button @click="park()">PARK</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="row"><strong>Tracking</strong></div>
+            <div style="margin-top:8px" class="row">
+                <select x-model.number="selectedTracking">
+                    <template x-for="(m, i) in trackingOptions" :key="i">
+                        <option :value="i" x-text="m"></option>
+                    </template>
+                </select>
+                <button @click="setTracking()">Set</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top:8px">
+        <div class="row"><strong>Manual Slew</strong></div>
+        <div style="margin-top:8px" class="row">
+            <div class="dir-grid">
+                <div></div>
+                <button @click="slew('ra', 1)">▲</button>
+                <div></div>
+                <button @click="slew('dec', -1)">◀</button>
+                <div style="display:flex;align-items:center;justify-content:center">
+                    <select x-model.number="speed">
+                        <template x-for="(s, i) in speedOptions" :key="i">
+                            <option :value="s" x-text="s"></option>
+                        </template>
+                    </select>
+                </div>
+                <button @click="slew('dec', 1)">▶</button>
+                <div></div>
+                <button @click="slew('ra', -1)">▼</button>
+                <div></div>
+            </div>
+        </div>
+        <div style="margin-top:8px" class="row">
+            <label style="margin-right:8px">Grados:</label>
+            <input type="number" min="1" max="90" x-model.number="degrees" style="width:70px" />
+            <span style="margin-left:8px;font-size:0.85em;color:#666">1&ndash;90</span>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top:8px" x-show="wifiAp">
+        <div class="row"><strong>Configuración Wi-Fi</strong></div>
+        <div style="margin-top:8px" class="row">
+            <input placeholder="SSID" x-model="wifi.ssid" />
+            <input placeholder="Password" x-model="wifi.password" type="password" />
+            <button @click="fetch('/api/wifi-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ssid: wifi.ssid, password: wifi.password})}).then(() => fetchStatus())">Configurar</button>
+        </div>
+        <div style="margin-top:8px;color:#a00">La red no está configurada. Conectar ahora para salir del modo AP.</div>
+    </div>
+
+    <footer>SPA embebida — llamadas REST a <code>/api/*</code></footer>
+</div>
+
+<!--INLINE_JS-->
+</body>
+
+</html>
