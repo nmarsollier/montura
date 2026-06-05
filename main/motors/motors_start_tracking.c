@@ -12,20 +12,7 @@
 static const char *TAG = "MOTORS_START_TRACKING";
 
 MotorResultCode motors_start_tracking(TrackingMode mode) {
-    if (motors_state.status != MOUNT_STATUS_READY) {
-        ESP_LOGW(TAG, "Rejected tracking start: motors not ready (status=%d)", motors_state.status);
-        return MOTOR_ERR_NOT_READY;
-    }
-
-    if (mode == TRACKING_NONE || mode == TRACKING_UNKNOWN) {
-        motors_stop();
-        return MOTOR_OK;
-    }
-
-    if (mode == TRACKING_MANUAL) {
-        motors_stop();
-        return MOTOR_OK;
-    }
+    motors_stop();
 
     float ra_speed = motors_get_tracking_speed(mode);
 

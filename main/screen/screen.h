@@ -21,66 +21,52 @@ esp_err_t screen_ssd1306_init(void);
 
 typedef struct {
     int width;
-
     int height;
-
     const uint8_t *data;
 } ScreenBitmap;
 
 void screen_draw_screen_bitmap(
-
     int x,
-
     int y,
-
     const ScreenBitmap *bitmap);
 
 void screen_draw_bitmap(
-
     int x,
-
     int y,
-
     const uint8_t *bitmap,
-
     int width,
-
     int height);
 
+/* Small yellow-zone icons (16×14) */
 extern const ScreenBitmap ICON_WIFI_ON;
-
 extern const ScreenBitmap ICON_WIFI_OFF;
-
 extern const ScreenBitmap ICON_TRACK_OFF;
-
 extern const ScreenBitmap ICON_TRACK_SIDEREAL;
-
 extern const ScreenBitmap ICON_TRACK_LUNAR;
-
 extern const ScreenBitmap ICON_TRACK_SOLAR;
-
 extern const ScreenBitmap ICON_STATUS_READY;
-
 extern const ScreenBitmap ICON_STATUS_SLEWING;
-
 extern const ScreenBitmap ICON_STATUS_ERROR;
-
 extern const ScreenBitmap ICON_RA;
-
 extern const ScreenBitmap ICON_DEC;
-
 extern const ScreenBitmap ICON_MONTURITA;
 
+/* Large blue-zone status icons (40×48~50) */
+extern const ScreenBitmap BIG_WIFI_OFF;
+extern const ScreenBitmap BIG_ALERT;
+extern const ScreenBitmap BIG_STOP;
+extern const ScreenBitmap BIG_PARKED;
+extern const ScreenBitmap BIG_STAR;
+extern const ScreenBitmap BIG_MOON;
+extern const ScreenBitmap BIG_SUN;
+extern const ScreenBitmap BIG_READY;
+extern const ScreenBitmap BIG_SLEWING;
+
 void screen_ssd1306_draw_glyph_columns(
-
     int x,
-
     int y,
-
     const uint16_t *columns,
-
     int width,
-
     int height);
 
 void screen_draw_text_5x10(int x, int y, const char *text);

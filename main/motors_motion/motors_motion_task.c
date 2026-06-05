@@ -48,6 +48,62 @@ static TaskHandle_t s_motion_task_handle = NULL;
 volatile float motors_motion_target_ra_deg = 0.0f;
 volatile float motors_motion_target_dec_deg = 0.0f;
 
+/* Start positions captured at motion start — used for slew acceleration ramps. */
+volatile float motors_motion_start_ra_deg = 0.0f;
+volatile float motors_motion_start_dec_deg = 0.0f;
+
+/* --------------------------------------------------------------------------
+ * Slew acceleration / deceleration
+ * -------------------------------------------------------------------------- */
+
+/*
+ * Fraction of the total slew distance used for acceleration and deceleration.
+ * 0.15 = 15% ramp-up + 70% cruise + 15% ramp-down.
+ */
+#define SLEW_RAMP_FRACTION 0.15f
+
+/*
+ * Minimum velocity factor during ramp. Prevents the motor from stalling
+ * at extremely low speeds while still providing a smooth start/stop.
+ */
+#define MIN_RAMP_FACTOR 0.12f
+
+/*
+ * Compute the effective velocity for an axis during a slew, applying
+ * acceleration and deceleration ramps based on distance traveled vs total.
+ *
+ * During TRACKING the ramp is bypassed — tracking speeds are too low to
+ * benefit from ramping and the velocity must remain constant.
+ */
+static float ramped_velocity(float target_vel, float position,
+                              float start_pos, float target_pos) {
+    if (motors_state.status != MOUNT_STATUS_SLEWING)
+        return target_vel;
+
+    float total_dist = fabsf(target_pos - start_pos);
+    if (total_dist < 1e-6f)
+        return target_vel;
+
+    float traveled = fabsf(position - start_pos);
+    float remaining = fabsf(target_pos - position);
+    float ramp_dist = total_dist * SLEW_RAMP_FRACTION;
+
+    float ramp = 1.0f;
+
+    if (traveled < ramp_dist) {
+        /* Acceleration phase */
+        ramp = traveled / ramp_dist;
+        if (ramp < MIN_RAMP_FACTOR) ramp = MIN_RAMP_FACTOR;
+    } else if (remaining < ramp_dist) {
+        /* Deceleration phase */
+        ramp = remaining / ramp_dist;
+        if (ramp < MIN_RAMP_FACTOR) ramp = MIN_RAMP_FACTOR;
+    }
+    /* else: cruise phase — ramp stays at 1.0 */
+
+    return target_vel * ramp;
+}
+
 /* --------------------------------------------------------------------------
  * Step period helpers
  * -------------------------------------------------------------------------- */
@@ -149,8 +205,16 @@ static void motors_motion_task_run(void *arg) {
             float ra_target = motors_motion_target_ra_deg;
             float dec_target = motors_motion_target_dec_deg;
 
-            uint32_t ra_period = step_period_us(motors_state.ra_velocity);
-            uint32_t dec_period = step_period_us(motors_state.dec_velocity);
+            /* Ramped velocities for slewing; tracking passes through unchanged */
+            float ra_vel = ramped_velocity(motors_state.ra_velocity,
+                                           motors_state.ra_position,
+                                           motors_motion_start_ra_deg, ra_target);
+            float dec_vel = ramped_velocity(motors_state.dec_velocity,
+                                            motors_state.dec_position,
+                                            motors_motion_start_dec_deg, dec_target);
+
+            uint32_t ra_period = step_period_us(ra_vel);
+            uint32_t dec_period = step_period_us(dec_vel);
 
             now = esp_timer_get_time();
 
@@ -256,6 +320,23 @@ static void motors_motion_task_run(void *arg) {
                         break;
                     }
 
+                    /* Recalculate ramped periods every ~200 steps for smooth ramps.
+                       Uses next_ra_step_us advance as a cheap step counter. */
+                    {
+                        static int64_t last_recalc_us = 0;
+                        if (now - last_recalc_us > 5000) { /* every ~5ms */
+                            float rv = ramped_velocity(motors_state.ra_velocity,
+                                                       motors_state.ra_position,
+                                                       motors_motion_start_ra_deg, ra_target);
+                            float dv = ramped_velocity(motors_state.dec_velocity,
+                                                       motors_state.dec_position,
+                                                       motors_motion_start_dec_deg, dec_target);
+                            ra_period = step_period_us(rv);
+                            dec_period = step_period_us(dv);
+                            last_recalc_us = now;
+                        }
+                    }
+
                     /* Step RA if due */
                     if (ra_has_target && now >= next_ra_step_us) {
                         step_axis_ra(ra_target);
@@ -316,6 +397,10 @@ void motors_motion_init(void) {
 void motors_motion_start(float ra_target_deg, float dec_target_deg) {
     motors_motion_target_ra_deg = ra_target_deg;
     motors_motion_target_dec_deg = dec_target_deg;
+
+    /* Capture start positions for slew acceleration ramps. */
+    motors_motion_start_ra_deg = motors_state.ra_position;
+    motors_motion_start_dec_deg = motors_state.dec_position;
 
     if (s_motion_task_handle != NULL)
         xTaskNotifyGive(s_motion_task_handle);

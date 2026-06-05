@@ -24,6 +24,21 @@ bool motors_is_valid_dec(float value);
 #define MOTOR_PULLEY_TEETH       (20)
 #define AXIS_PULLEY_TEETH        (80)
 
+/*
+ * Motion calibration factor.
+ *
+ * Compensates for discrepancies between configured and actual step resolution.
+ * When commanding 180° results in 90° physical movement, the factor is 2.0.
+ *
+ * Adjust this value until commanded angles match physical movement:
+ *   - Mount moves too little → increase the factor
+ *   - Mount moves too much   → decrease the factor
+ *
+ * Formula: factor = commanded_angle / actual_angle
+ * Example:  2.0 = 180° / 90°
+ */
+#define MOTION_CALIBRATION_FACTOR 2.0f
+
 /* --------------------------------------------------------------------------
  * Microstep and step resolution — sourced from TMC hardware
  *
@@ -51,12 +66,13 @@ static inline uint16_t motors_get_microsteps(void) {
  * Angular displacement per microstep at the mount axis.
  * Computed at runtime using the TMC-verified microstep count.
  *
- * Formula: 360° / (200 full-steps × microsteps × (80/20 gear ratio))
+ * Formula: 360° / (200 full-steps × microsteps × (80/20) × calibration)
  *
- * With 256 microsteps: 360 / 204,800 = 0.0017578125° ≈ 6.33 arc-sec
+ * With 256 µsteps and calibration 2.0: 360 / 409,600 = 0.00087890625°
  */
 static inline float motors_get_deg_per_microstep(void) {
     return 360.0f / ((float) MOTOR_FULL_STEPS_PER_REV *
                      (float) motors_get_microsteps() *
-                     ((float) AXIS_PULLEY_TEETH / (float) MOTOR_PULLEY_TEETH));
+                     ((float) AXIS_PULLEY_TEETH / (float) MOTOR_PULLEY_TEETH) *
+                     MOTION_CALIBRATION_FACTOR);
 }
