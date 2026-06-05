@@ -165,6 +165,12 @@ MountResult mount_home(void);
  */
 MountResult mount_move_axis(MotorAxis axis, float degrees, int speed);
 
+/* Convert RA from HMS struct to decimal hours. */
+float mount_get_ra_hours(void);
+
+/* Convert DEC from DMS struct to decimal degrees. */
+float mount_get_dec_deg(void);
+
 const char *tracking_to_string(TrackingMode tracking);
 
 const char *tracking_valid_values(void);
@@ -173,3 +179,60 @@ const char *status_to_string(MotorsStatus status);
 
 TrackingMode tracking_from_string(const char *value);
 
+/* ─── Alpaca bridge — public API for the Alpaca REST layer ─── */
+
+/* Horizontal coordinates (calculated from equatorial + time + site). */
+float mount_alpaca_get_altitude(void);
+float mount_alpaca_get_azimuth(void);
+
+/* Sidereal time in hours at the current site and UTC time. */
+float mount_alpaca_get_sidereal_time(void);
+
+/* UTC date as ISO 8601 string ("2025-06-05T20:15:00"). */
+const char *mount_alpaca_get_utc_date(void);
+MountResult  mount_alpaca_set_utc_date(const char *iso_time);
+
+/* State queries. */
+bool mount_alpaca_get_is_slewing(void);
+bool mount_alpaca_get_is_tracking(void);
+bool mount_alpaca_get_is_parked(void);
+bool mount_alpaca_get_is_home(void);
+
+/* Site location (degrees, metres). */
+float mount_alpaca_get_site_latitude(void);
+float mount_alpaca_get_site_longitude(void);
+int   mount_alpaca_get_site_elevation(void);
+MountResult mount_alpaca_set_site_latitude(float lat);
+MountResult mount_alpaca_set_site_longitude(float lon);
+MountResult mount_alpaca_set_site_elevation(int elevation);
+
+/* Tracking rate as Alpaca DriveRates enum (0=sidereal, 1=lunar, 2=solar, 3=king). */
+int  mount_alpaca_get_tracking_rate(void);
+MountResult mount_alpaca_set_tracking_rate(int rate);
+bool mount_alpaca_get_tracking(void);
+MountResult mount_alpaca_set_tracking(bool enabled);
+void mount_alpaca_get_tracking_rate_name(int idx, char *buf, size_t len);
+
+/* Slew / sync in equatorial coordinates. */
+MountResult mount_alpaca_slew_to_coordinates(float ra_hours, float dec_deg);
+MountResult mount_alpaca_sync_to_coordinates(float ra_hours, float dec_deg);
+MountResult mount_alpaca_abort_slew(void);
+
+/* Target coordinates (stored for slewtotarget / synctotarget). */
+float mount_alpaca_get_target_ra(void);
+float mount_alpaca_get_target_dec(void);
+void  mount_alpaca_set_target_ra(float ra_hours);
+void  mount_alpaca_set_target_dec(float dec_deg);
+MountResult mount_alpaca_slew_to_target(void);
+MountResult mount_alpaca_sync_to_target(void);
+
+/* Pier side (0=East, 1=West). */
+int  mount_alpaca_get_side_of_pier(void);
+MountResult mount_alpaca_set_side_of_pier(int side);
+
+/* Slew settle time (seconds). */
+int  mount_alpaca_get_slew_settle_time(void);
+MountResult mount_alpaca_set_slew_settle_time(int seconds);
+
+/* Park position. */
+MountResult mount_alpaca_set_park(void);
