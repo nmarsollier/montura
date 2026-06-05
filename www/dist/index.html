@@ -4,89 +4,441 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>Montura — Control (dev)</title>
-    <style>body {
-    font-family: Inter, system-ui, Arial;
+    <title>Monturita</title>
+    <style>/* ═══════════════════════════════════════════════════
+   Monturita — Velvet Dark Theme
+   Paleta: negro, gris oscuro, rojo velvet
+   ═══════════════════════════════════════════════════ */
+
+:root {
+    --bg:            #080808;
+    --panel:         #111111;
+    --panel-raised:  #181818;
+    --border:        #251010;
+    --accent:        #8b1a1a;
+    --accent-bright: #b52222;
+    --accent-glow:   #3d0808;
+    --text:          #ebebeb;
+    --text-dim:      #8a7a7a;
+    --text-title:    #e8c0c0;
+    --text-accent:   #d48080;
+    --btn-bg:        #1c0d0d;
+    --btn-hover:     #3d1515;
+    --btn-active:    #5a1a1a;
+    --input-bg:      #0d0d0d;
+    --input-border:  #2a1515;
+    --shadow:        0 4px 24px rgba(0, 0, 0, .7);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background: #0f1720;
-    color: #e6eef8
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
 }
+
+/* ═══════════════════════════════════════════════════
+   Layout
+   ═══════════════════════════════════════════════════ */
 
 .app {
-    max-width: 900px;
-    margin: 24px auto;
-    padding: 20px
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
 }
+
+/* ═══════════════════════════════════════════════════
+   Header
+   ═══════════════════════════════════════════════════ */
+
+.header {
+    text-align: center;
+    padding: 28px 16px 20px;
+    margin-bottom: 16px;
+}
+
+.header-brand {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--text-title);
+    text-shadow: 0 0 40px var(--accent-glow), 0 2px 4px rgba(0,0,0,.8);
+    margin: 0;
+}
+
+.header-brand span {
+    color: var(--accent-bright);
+}
+
+.header-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.header-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 14px auto 0;
+    border: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   Panels
+   ═══════════════════════════════════════════════════ */
 
 .panel {
-    background: #0b1220;
-    border-radius: 10px;
-    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
     margin-bottom: 12px;
-    box-shadow: 0 6px 18px rgba(2, 6, 23, .6)
+    box-shadow: var(--shadow);
+    transition: border-color .2s;
 }
 
-h1 {
-    margin: 0 0 8px 0;
-    font-size: 20px
+.panel:hover {
+    border-color: #351515;
 }
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.panel-header strong {
+    color: var(--text-title);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .6px;
+}
+
+.panel-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent-bright);
+    box-shadow: 0 0 8px var(--accent-bright);
+}
+
+/* ═══════════════════════════════════════════════════
+   Status bar
+   ═══════════════════════════════════════════════════ */
+
+.status-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .4px;
+    background: var(--btn-bg);
+    color: var(--text-accent);
+    border: 1px solid var(--accent);
+}
+
+.coords {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: .3px;
+}
+
+.coords-label {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 4px;
+}
+
+.info-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.info-row span {
+    color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════════
+   Grid
+   ═══════════════════════════════════════════════════ */
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* ═══════════════════════════════════════════════════
+   Buttons
+   ═══════════════════════════════════════════════════ */
 
 .row {
     display: flex;
     gap: 8px;
-    align-items: center
-}
-
-.grid {
-    display: grid;
-    grid-template-columns:1fr 1fr;
-    gap: 12px
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 button {
-    background: #1f2937;
-    color: #e6eef8;
-    border: 0;
-    padding: 10px 12px;
+    background: var(--btn-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
     border-radius: 8px;
-    cursor: pointer
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: .3px;
+    transition: all .15s ease;
 }
 
-.big {
-    padding: 16px;
-    font-size: 18px
+button:hover {
+    background: var(--btn-hover);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+button:active {
+    background: var(--btn-active);
+}
+
+button.danger {
+    background: #200a0a;
+    border-color: #4a1515;
+    color: var(--text-accent);
+}
+
+button.danger:hover {
+    background: #3d1010;
+    border-color: var(--accent-bright);
+    color: #f08080;
+}
+
+button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+}
+
+button.primary:hover {
+    background: var(--accent-bright);
+    border-color: var(--accent-bright);
+    box-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════════════════
+   Manual Slew — two-column layout, centered
+   ═══════════════════════════════════════════════════ */
+
+.slew-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: center;
+    justify-items: center;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* Left column: Grados + Velocidad (label-left, input-right) */
+
+.slew-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.slew-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.slew-field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    min-width: 70px;
+    text-align: right;
+}
+
+.slew-field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.slew-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.slew-field input,
+.slew-field select {
+    width: 90px;
+}
+
+/* Right column: directional pad */
+
+.slew-pad {
+    display: flex;
+    justify-content: center;
 }
 
 .dir-grid {
     display: grid;
-    grid-template-columns:60px 60px 60px;
-    grid-template-rows:60px 60px 60px;
-    justify-content: center;
-    align-items: center
+    grid-template-columns: 52px 52px 52px;
+    grid-template-rows: 48px 48px 48px;
+    align-items: center;
+    justify-items: center;
+    gap: 4px;
 }
 
 .dir-grid button {
-    width: 56px;
-    height: 56px
+    width: 48px;
+    height: 42px;
+    font-size: 18px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
 }
+
+.dir-grid .center-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .6px;
+}
+
+@media (max-width: 500px) {
+    .slew-layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        max-width: 100%;
+    }
+    .slew-pad {
+        order: -1;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   Inputs
+   ═══════════════════════════════════════════════════ */
 
 select, input {
-    background: #071027;
-    color: #e6eef8;
-    border: 1px solid #21303d;
-    padding: 8px;
-    border-radius: 8px
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--input-border);
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color .15s;
+    outline: none;
 }
 
-.status {
-    font-weight: 600
+select:focus, input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
 }
+
+select {
+    cursor: pointer;
+}
+
+input[type="number"] {
+    width: 72px;
+}
+
+input::placeholder {
+    color: #4a3a3a;
+}
+
+/* ═══════════════════════════════════════════════════
+   WiFi warning
+   ═══════════════════════════════════════════════════ */
+
+.wifi-warning {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #1a0a0a;
+    border: 1px solid #4a2020;
+    color: var(--text-accent);
+    font-size: 13px;
+}
+
+.wifi-warning::before {
+    content: '⚠ ';
+}
+
+/* ═══════════════════════════════════════════════════
+   Footer
+   ═══════════════════════════════════════════════════ */
 
 footer {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 12px
+    text-align: center;
+    font-size: 11px;
+    color: #332525;
+    margin-top: 20px;
+    letter-spacing: .5px;
+}
+
+footer code {
+    color: #4a3535;
+    background: #0d0d0d;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    .header-brand {
+        font-size: 26px;
+    }
+    .app {
+        padding: 12px 8px 30px;
+    }
+    .panel {
+        padding: 14px;
+    }
 }
 </style>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -94,83 +446,124 @@ footer {
 
 <body>
 <div class="app" x-data="mountApp()">
+
+    <!-- ═══ Header ═══ -->
+    <div class="header">
+        <h1 class="header-brand"><span>Monturita</span></h1>
+        <div class="header-sub">Non precision instruments Inc.</div>
+        <hr class="header-line">
+    </div>
+
+    <!-- ═══ Status ═══ -->
     <div class="panel">
-        <div class="row">
-            <h1>Montura — Control</h1>
+        <div class="status-row">
+            <span class="status-badge" x-text="statusText"></span>
             <div style="flex:1"></div>
-            <div class="status">Estado: <span x-text="statusText"></span></div>
+            <span class="coords"><span class="coords-label">RA</span> <span x-text="status.ra"></span></span>
+            <span class="coords"><span class="coords-label">DEC</span> <span x-text="status.dec"></span></span>
         </div>
-        <div style="margin-top:8px">RA: <span x-text="status.ra"></span> &nbsp; DEC: <span x-text="status.dec"></span>
-        </div>
-        <div style="margin-top:8px">Tracking: <span x-text="serverTracking"></span></div>
-        <div style="margin-top:8px">Lat: <span x-text="settings.lat"></span> • Lon: <span x-text="settings.lon"></span>
-            •
-            Elev: <span x-text="settings.elevation"></span>m
+        <div class="info-row">
+            <div>Tracking <span x-text="serverTracking"></span></div>
+            <div>Lat <span x-text="settings.lat"></span></div>
+            <div>Lon <span x-text="settings.lon"></span></div>
+            <div>Elev <span x-text="settings.elevation"></span> m</div>
         </div>
     </div>
 
+    <!-- ═══ Actions + Tracking ═══ -->
     <div class="grid">
         <div class="panel">
-            <div class="row"><strong>Acciones</strong></div>
-            <div style="margin-top:8px" class="row">
-                <button @click="stop()">STOP</button>
+            <div class="panel-header">
+                <div class="panel-dot"></div>
+                <strong>Acciones</strong>
+            </div>
+            <div class="row">
+                <button class="danger" @click="stop()">STOP</button>
                 <button @click="home()">HOME</button>
                 <button @click="park()">PARK</button>
             </div>
         </div>
 
         <div class="panel">
-            <div class="row"><strong>Tracking</strong></div>
-            <div style="margin-top:8px" class="row">
+            <div class="panel-header">
+                <div class="panel-dot"></div>
+                <strong>Tracking</strong>
+            </div>
+            <div class="row">
                 <select x-model.number="selectedTracking">
                     <template x-for="(m, i) in trackingOptions" :key="i">
                         <option :value="i" x-text="m"></option>
                     </template>
                 </select>
-                <button @click="setTracking()">Set</button>
+                <button class="primary" @click="setTracking()">Set</button>
             </div>
         </div>
     </div>
 
-    <div class="panel" style="margin-top:8px">
-        <div class="row"><strong>Manual Slew</strong></div>
-        <div style="margin-top:8px" class="row">
-            <div class="dir-grid">
-                <div></div>
-                <button @click="slew('ra', 1)">▲</button>
-                <div></div>
-                <button @click="slew('dec', -1)">◀</button>
-                <div style="display:flex;align-items:center;justify-content:center">
+    <!-- ═══ Manual Slew ═══ -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <strong>Manual Slew</strong>
+        </div>
+
+        <div class="slew-layout">
+            <!-- Left: Grados + Velocidad -->
+            <div class="slew-controls">
+                <div class="slew-field">
+                    <label>Grados (1–90°)</label>
+                    <div class="slew-field-row">
+                        <input type="number" min="1" max="90" x-model.number="degrees">
+                    </div>
+                </div>
+
+                <div class="slew-field">
+                    <label>Velocidad</label>
                     <select x-model.number="speed">
                         <template x-for="(s, i) in speedOptions" :key="i">
-                            <option :value="s" x-text="s"></option>
+                            <option :value="s" x-text="s + '×'"></option>
                         </template>
                     </select>
                 </div>
-                <button @click="slew('dec', 1)">▶</button>
-                <div></div>
-                <button @click="slew('ra', -1)">▼</button>
-                <div></div>
+            </div>
+
+            <!-- Right: Directional pad -->
+            <div class="slew-pad">
+                <div class="dir-grid">
+                    <div></div>
+                    <button @click="slew('ra', 1)" title="RA +">▲</button>
+                    <div></div>
+                    <button @click="slew('dec', -1)" title="DEC −">◀</button>
+                    <div class="center-cell">RA·DEC</div>
+                    <button @click="slew('dec', 1)" title="DEC +">▶</button>
+                    <div></div>
+                    <button @click="slew('ra', -1)" title="RA −">▼</button>
+                    <div></div>
+                </div>
             </div>
         </div>
-        <div style="margin-top:8px" class="row">
-            <label style="margin-right:8px">Grados:</label>
-            <input type="number" min="1" max="90" x-model.number="degrees" style="width:70px" />
-            <span style="margin-left:8px;font-size:0.85em;color:#666">1&ndash;90</span>
-        </div>
     </div>
 
-    <div class="panel" style="margin-top:8px" x-show="wifiAp">
-        <div class="row"><strong>Configuración Wi-Fi</strong></div>
-        <div style="margin-top:8px" class="row">
-            <input placeholder="SSID" x-model="wifi.ssid" />
-            <input placeholder="Password" x-model="wifi.password" type="password" />
-            <button @click="fetch('/api/wifi-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ssid: wifi.ssid, password: wifi.password})}).then(() => fetchStatus())">Configurar</button>
+    <!-- ═══ WiFi Setup ═══ -->
+    <div class="panel" x-show="wifiAp">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <strong>Configuración Wi-Fi</strong>
         </div>
-        <div style="margin-top:8px;color:#a00">La red no está configurada. Conectar ahora para salir del modo AP.</div>
+        <div class="row">
+            <input placeholder="SSID" x-model="wifi.ssid">
+            <input placeholder="Password" x-model="wifi.password" type="password">
+            <button class="primary"
+                    @click="fetch('/api/wifi-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ssid: wifi.ssid, password: wifi.password})}).then(() => fetchStatus())">
+                Conectar
+            </button>
+        </div>
+        <div class="wifi-warning">La red no está configurada. Conectar ahora para salir del modo AP.</div>
     </div>
 
-    <footer>SPA embebida — llamadas REST a <code>/api/*</code></footer>
+    <!-- ═══ Footer ═══ -->
+    <footer>Monturita · SPA embebida · REST <code>/api/*</code></footer>
+
 </div>
 
 <script>function mountApp() {
