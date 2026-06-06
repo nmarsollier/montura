@@ -11,8 +11,8 @@
 float motors_get_slewing_speed(int speed) {
     switch (speed) {
         case 1: return 0.5f;
-        case 2: return 1;
-        case 3: return 16;
-        default: return 32;
+        case 2: return 1.0f;
+        case 3: return 16.0f;
+        default: return 32.0f;
     }
 }

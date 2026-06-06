@@ -1,19 +1,26 @@
 /* MotorsMotion - motors_motion_task.c
  *
- * Purpose: FreeRTOS motion task — advances axis positions one microstep at a
- * time at the frequency required to achieve the commanded angular velocity.
+ * Purpose: FreeRTOS motion task — consumes commands from the priority queue
+ * and advances axis positions one microstep at a time at the frequency
+ * required to achieve the commanded angular velocity.
+ *
+ * The motion task is the SINGLE WRITER of motors_state position fields,
+ * guaranteeing thread-safe position updates. Status transitions are also
+ * performed here for commands that change operational state.
  *
  * Microstep resolution is sourced from the TMC2209 driver at runtime via
  * motors_get_deg_per_microstep(), ensuring it always matches hardware.
  *
  * Hardware: TMC2209 STEP/DIR GPIO control
- * Motor: NEMA 17 (200 full steps/rev, 1.8°/step)
+ * Motor: NEMA 17 (200 full steps/rev, 1.8 deg/step)
  * Gear ratio: 20/80 (4:1) motor-to-axis
  *
- * Timing strategies (dual-mode):
- *   - SLOW (tracking): step period > 20ms → vTaskDelay yields CPU
- *   - FAST (slewing):  step period <= 20ms → busy-wait with esp_timer for µs precision
+ * Timing strategies (dual-mode, single loop):
+ *   - SLOW (tracking / slow slews): step period > 20ms -> vTaskDelay yields CPU
+ *   - FAST (slewing): step period <= 20ms -> busy-wait with esp_timer,
+ *     checking the command queue every ~512 us for preemption
  */
+
 #include "motors_motion.h"
 #include "motors_motion_internal.h"
 #include "motors_internal.h"
@@ -25,6 +32,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 static const char *TAG = "MOTORS_MOTION_TASK";
 
@@ -32,7 +40,7 @@ static const char *TAG = "MOTORS_MOTION_TASK";
 #define MOTION_TASK_STACK_WORDS 2048
 #define MOTION_TASK_PRIORITY    5
 
-/* Step period upper bound (µs) used when velocity is zero or unknown. */
+/* Step period upper bound (us) used when velocity is zero or unknown. */
 #define MAX_STEP_PERIOD_US (10 * 1000 * 1000) /* 10 seconds */
 
 /*
@@ -44,13 +52,17 @@ static const char *TAG = "MOTORS_MOTION_TASK";
 
 static TaskHandle_t s_motion_task_handle = NULL;
 
-/* Motion targets shared with motors_motion_sync.c via motors_motion_internal.h */
-volatile float motors_motion_target_ra_deg = 0.0f;
-volatile float motors_motion_target_dec_deg = 0.0f;
-
-/* Start positions captured at motion start — used for slew acceleration ramps. */
-volatile float motors_motion_start_ra_deg = 0.0f;
-volatile float motors_motion_start_dec_deg = 0.0f;
+/* --------------------------------------------------------------------------
+ * Local motion state — active command being executed by the task.
+ * -------------------------------------------------------------------------- */
+static struct {
+    MotionCommandType active_cmd_type;
+    float ra_target;
+    float dec_target;
+    float ra_start;       /* position captured at motion start (for ramps) */
+    float dec_start;
+    bool  motion_active;
+} s_motion;
 
 /* --------------------------------------------------------------------------
  * Slew acceleration / deceleration
@@ -58,15 +70,18 @@ volatile float motors_motion_start_dec_deg = 0.0f;
 
 /*
  * Fraction of the total slew distance used for acceleration and deceleration.
- * 0.15 = 15% ramp-up + 70% cruise + 15% ramp-down.
+ * 0.20 = 20 % ramp-up + 60 % cruise + 20 % ramp-down.
  */
-#define SLEW_RAMP_FRACTION 0.15f
+#define SLEW_RAMP_FRACTION 0.20f
 
 /*
- * Minimum velocity factor during ramp. Prevents the motor from stalling
- * at extremely low speeds while still providing a smooth start/stop.
+ * Minimum velocity factor during ramp.
+ * Matching SLEW_RAMP_FRACTION creates a flat plateau at the start/end
+ * of the ramp before linear acceleration begins — gentler on belts and
+ * small NEMA 17 motors.  The motor starts with holding torque before
+ * the first acceleration step.
  */
-#define MIN_RAMP_FACTOR 0.12f
+#define MIN_RAMP_FACTOR 0.20f
 
 /*
  * Compute the effective velocity for an axis during a slew, applying
@@ -84,7 +99,7 @@ static float ramped_velocity(float target_vel, float position,
     if (total_dist < 1e-6f)
         return target_vel;
 
-    float traveled = fabsf(position - start_pos);
+    float traveled  = fabsf(position - start_pos);
     float remaining = fabsf(target_pos - position);
     float ramp_dist = total_dist * SLEW_RAMP_FRACTION;
 
@@ -118,261 +133,440 @@ static uint32_t step_period_us(float velocity_dps) {
         return MAX_STEP_PERIOD_US;
 
     float deg_per_step = motors_get_deg_per_microstep();
-    float period_s = deg_per_step / fabsf(velocity_dps);
-    uint32_t us = (uint32_t) (period_s * 1e6f);
+    float period_s     = deg_per_step / fabsf(velocity_dps);
+    uint32_t us        = (uint32_t)(period_s * 1e6f);
     return (us == 0) ? 1 : us;
 }
 
 /* --------------------------------------------------------------------------
- * Axis step helpers — advance position by one microstep toward target.
- * Returns true when the axis is still moving, false when at target.
+ * Pure step computation — separable from GPIO hardware for testability.
+ *
+ * Returns true if a step is needed. When true, *next_position is the
+ * new axis position and *direction is the required motor direction.
  * -------------------------------------------------------------------------- */
-
-static bool step_axis_ra(float target_deg) {
-    float error = target_deg - motors_state.ra_position;
-    float deg_per_step = motors_get_deg_per_microstep();
-
+static bool compute_next_step(float current, float target, float deg_per_step,
+                               float *next_position, MotorDirection *direction) {
+    float error = target - current;
     if (fabsf(error) < (deg_per_step * 0.5f))
         return false;
 
-    float delta = (error > 0.0f) ? deg_per_step : -deg_per_step;
-    float candidate = motors_state.ra_position + delta;
-
-    if (!motors_is_valid_ra(candidate)) {
-        ESP_LOGW(TAG, "RA limit reached at %.4f", candidate);
-        return false;
+    if (error > 0.0f) {
+        *next_position = current + deg_per_step;
+        *direction     = MOTOR_DIRECTION_POSITIVE;
+    } else {
+        *next_position = current - deg_per_step;
+        *direction     = MOTOR_DIRECTION_NEGATIVE;
     }
-
-    motors_motion_hw_set_direction_ra(error > 0.0f ? MOTOR_DIRECTION_POSITIVE : MOTOR_DIRECTION_NEGATIVE);
-    motors_motion_hw_step_ra();
-
-    motors_state.ra_position = candidate;
-    return true;
-}
-
-static bool step_axis_dec(float target_deg) {
-    float error = target_deg - motors_state.dec_position;
-    float deg_per_step = motors_get_deg_per_microstep();
-
-    if (fabsf(error) < (deg_per_step * 0.5f))
-        return false;
-
-    float delta = (error > 0.0f) ? deg_per_step : -deg_per_step;
-    float candidate = motors_state.dec_position + delta;
-
-    if (!motors_is_valid_dec(candidate)) {
-        ESP_LOGW(TAG, "DEC limit reached at %.4f", candidate);
-        return false;
-    }
-
-    motors_motion_hw_set_direction_dec(error > 0.0f ? MOTOR_DIRECTION_POSITIVE : MOTOR_DIRECTION_NEGATIVE);
-    motors_motion_hw_step_dec();
-
-    motors_state.dec_position = candidate;
     return true;
 }
 
 /* --------------------------------------------------------------------------
- * Motion task
+ * Axis step helpers — advance position by one microstep toward target.
  *
- * Uses two timing strategies depending on step rate:
- *
- * 1. TRACKING/Slow (> 20ms period): Uses vTaskDelay() to yield the CPU.
- *    The TMC2209 hardware interpolator (intpol=1) internally generates
- *    smooth 256-microstep motion from each external STEP pulse.
- *
- * 2. SLEWING/Fast (<= 20ms period, down to ~55µs): Uses esp_timer
- *    busy-wait loop for precise microsecond-level step timing.
+ * Use compute_next_step() for the position calculation, then validate
+ * limits, drive GPIO, and update motors_state.
+ * Returns true when the axis is still moving, false when at target or limit.
  * -------------------------------------------------------------------------- */
-static void motors_motion_task_run(void *arg) {
-    (void) arg;
 
-    while (true) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+static bool step_axis_ra(float target_deg, float deg_per_step) {
+    float next_position;
+    MotorDirection direction;
 
-        float deg_per_step = motors_get_deg_per_microstep();
+    if (!compute_next_step(motors_state.ra_position, target_deg,
+                            deg_per_step, &next_position, &direction))
+        return false;
 
-        ESP_LOGI(TAG, "Motion started: RA target=%.4f DEC target=%.4f (DPS=%.6f)",
-                 motors_motion_target_ra_deg, motors_motion_target_dec_deg, deg_per_step);
+    if (!motors_is_valid_ra(next_position)) {
+        ESP_LOGW(TAG, "RA limit reached at %.4f", next_position);
+        return false;
+    }
 
+    motors_motion_hw_set_direction_ra(direction);
+    motors_motion_hw_step_ra();
+    motors_state.ra_position = next_position;
+    return true;
+}
+
+static bool step_axis_dec(float target_deg, float deg_per_step) {
+    float next_position;
+    MotorDirection direction;
+
+    if (!compute_next_step(motors_state.dec_position, target_deg,
+                            deg_per_step, &next_position, &direction))
+        return false;
+
+    if (!motors_is_valid_dec(next_position)) {
+        ESP_LOGW(TAG, "DEC limit reached at %.4f", next_position);
+        return false;
+    }
+
+    motors_motion_hw_set_direction_dec(direction);
+    motors_motion_hw_step_dec();
+    motors_state.dec_position = next_position;
+    return true;
+}
+
+/* --------------------------------------------------------------------------
+ * Motion conditions check — returns false when the current motion should end.
+ * -------------------------------------------------------------------------- */
+static bool check_motion_conditions(float deg_per_step) {
+    float half_step = deg_per_step * 0.5f;
+    bool ra_has_target =
+        fabsf(s_motion.ra_target - motors_state.ra_position) >= half_step;
+    bool dec_has_target =
+        fabsf(s_motion.dec_target - motors_state.dec_position) >= half_step;
+
+    /* Slew completion: both axes at target. */
+    if (motors_state.status == MOUNT_STATUS_SLEWING &&
+        !ra_has_target && !dec_has_target) {
+        motors_state.status      = MOUNT_STATUS_READY;
+        motors_state.tracking    = TRACKING_NONE;
+        motors_state.last_update = esp_timer_get_time();
+        s_motion.motion_active   = false;
+
+        ESP_LOGI(TAG, "Slew complete: RA=%.4f DEC=%.4f",
+                 motors_state.ra_position, motors_state.dec_position);
+        return false;
+    }
+
+    /* External tracking stop. */
+    if ((motors_state.tracking == TRACKING_NONE ||
+         motors_state.tracking == TRACKING_MANUAL) &&
+        motors_state.status == MOUNT_STATUS_TRACKING) {
+        motors_state.status      = MOUNT_STATUS_READY;
+        motors_state.last_update = esp_timer_get_time();
+        s_motion.motion_active   = false;
+
+        ESP_LOGI(TAG, "Tracking stopped: RA=%.4f DEC=%.4f",
+                 motors_state.ra_position, motors_state.dec_position);
+        return false;
+    }
+
+    return true;
+}
+
+/* --------------------------------------------------------------------------
+ * Command processing — handle one MotionCommand and set up motion state.
+ *
+ * This is the ONLY place where motors_state transitions occur for
+ * operational commands (SLEW, TRACK, STOP, PARK, etc.).
+ * -------------------------------------------------------------------------- */
+static void process_command(MotionCommand cmd) {
+    s_motion.active_cmd_type = cmd.type;
+
+    switch (cmd.type) {
+        case MOTION_CMD_SLEW:
+            motors_set_axis_velocity_ra(cmd.ra_velocity);
+            motors_set_axis_velocity_dec(cmd.dec_velocity);
+            motors_state.status   = MOUNT_STATUS_SLEWING;
+            motors_state.tracking = TRACKING_NONE;
+
+            s_motion.ra_target   = cmd.ra_target_deg;
+            s_motion.dec_target  = cmd.dec_target_deg;
+            s_motion.ra_start    = motors_state.ra_position;
+            s_motion.dec_start   = motors_state.dec_position;
+            s_motion.motion_active = true;
+
+            ESP_LOGI(TAG, "SLEW started: RA %.4f->%.4f DEC %.4f->%.4f vel=%.4f/%.4f",
+                     motors_state.ra_position, cmd.ra_target_deg,
+                     motors_state.dec_position, cmd.dec_target_deg,
+                     cmd.ra_velocity, cmd.dec_velocity);
+            break;
+
+        case MOTION_CMD_TRACK:
+            motors_set_axis_velocity_ra(cmd.ra_velocity);
+            motors_set_axis_velocity_dec(0.0f);
+            motors_state.status   = MOUNT_STATUS_TRACKING;
+            motors_state.tracking = cmd.tracking_mode;
+
+            /*
+             * Tracking runs open-ended: target is set to the axis limit so
+             * the loop never completes on its own — it only stops when an
+             * external status change (STOP, PARK) is detected.
+             */
+            s_motion.ra_target   = motors_state.limits.ra_max;
+            s_motion.dec_target  = motors_state.dec_position;
+            s_motion.ra_start    = motors_state.ra_position;
+            s_motion.dec_start   = motors_state.dec_position;
+            s_motion.motion_active = true;
+
+            ESP_LOGI(TAG, "TRACK started: mode=%s ra_vel=%.6f",
+                     tracking_to_string(cmd.tracking_mode), cmd.ra_velocity);
+            break;
+
+        case MOTION_CMD_MOVE_AXIS:
+            motors_set_axis_velocity_ra(fabsf(cmd.ra_velocity));
+            motors_set_axis_velocity_dec(fabsf(cmd.dec_velocity));
+            motors_state.status   = MOUNT_STATUS_SLEWING;
+            motors_state.tracking = TRACKING_MANUAL;
+
+            /*
+             * Continuous motion: each moving axis targets its limit in the
+             * direction of travel so the loop never self-completes.
+             * Motion stops only on the next command (rate = 0 or STOP).
+             */
+            s_motion.ra_target = (cmd.ra_velocity >= 0.0f)
+                ? motors_state.limits.ra_max : motors_state.limits.ra_min;
+            s_motion.dec_target = (cmd.dec_velocity >= 0.0f)
+                ? motors_state.limits.dec_max : motors_state.limits.dec_min;
+            s_motion.ra_start    = motors_state.ra_position;
+            s_motion.dec_start   = motors_state.dec_position;
+            s_motion.motion_active = true;
+
+            ESP_LOGI(TAG, "MOVE_AXIS started: RA=%.6f DEC=%.6f deg/s",
+                     cmd.ra_velocity, cmd.dec_velocity);
+            break;
+
+        case MOTION_CMD_STOP:
+            s_motion.motion_active = false;
+            motors_state.status    = MOUNT_STATUS_READY;
+            motors_state.tracking  = TRACKING_NONE;
+            motors_state.last_update = esp_timer_get_time();
+            ESP_LOGI(TAG, "STOP processed");
+            break;
+
+        case MOTION_CMD_PARK:
+            s_motion.motion_active = false;
+            motors_state.status    = MOUNT_STATUS_PARKED;
+            motors_state.tracking  = TRACKING_NONE;
+            motors_state.last_update = esp_timer_get_time();
+            ESP_LOGI(TAG, "PARK processed");
+            break;
+
+        case MOTION_CMD_DISABLE:
+            s_motion.motion_active = false;
+            motors_motion_hw_disable();
+            motors_state.status    = MOUNT_STATUS_DISABLED;
+            motors_state.tracking  = TRACKING_MANUAL;
+            motors_state.last_update = esp_timer_get_time();
+            ESP_LOGI(TAG, "DISABLE processed");
+            break;
+
+        case MOTION_CMD_ENABLE:
+            s_motion.motion_active = false;
+            motors_motion_hw_enable();
+            motors_state.status    = MOUNT_STATUS_READY;
+            motors_state.tracking  = TRACKING_NONE;
+            motors_state.last_update = esp_timer_get_time();
+            ESP_LOGI(TAG, "ENABLE processed");
+            break;
+
+        case MOTION_CMD_SYNC:
+            s_motion.motion_active = false;
+            motors_state.ra_position  = cmd.ra_target_deg;
+            motors_state.dec_position = cmd.dec_target_deg;
+            motors_state.last_update  = esp_timer_get_time();
+
+            /*
+             * Also align the active motion targets so a future start
+             * doesn't jump to stale coordinates.
+             */
+            s_motion.ra_target  = cmd.ra_target_deg;
+            s_motion.dec_target = cmd.dec_target_deg;
+            s_motion.ra_start   = cmd.ra_target_deg;
+            s_motion.dec_start  = cmd.dec_target_deg;
+
+            ESP_LOGI(TAG, "SYNC processed: RA=%.4f DEC=%.4f",
+                     cmd.ra_target_deg, cmd.dec_target_deg);
+            break;
+    }
+}
+
+/* --------------------------------------------------------------------------
+ * Unified motion loop — single code path for both tracking and slewing.
+ *
+ * Selects the appropriate wait strategy each iteration:
+ *   - vTaskDelay   when step period > 20 ms (tracking, slow slews)
+ *   - busy-wait    when step period <= 20 ms (fast slewing)
+ *
+ * Polls the command queue at every opportunity so higher-priority
+ * commands (TRACK during SLEW, STOP) can preempt immediately.
+ * -------------------------------------------------------------------------- */
+static void motion_loop(void) {
+    int64_t next_ra_us = esp_timer_get_time();
+    int64_t next_dec_us = next_ra_us;
+    int64_t last_ramp_recalc_us = 0;
+    int64_t last_check_us = 0;          /* throttle queue poll + conditions */
+
+    uint32_t ra_period  = MAX_STEP_PERIOD_US;
+    uint32_t dec_period = MAX_STEP_PERIOD_US;
+
+    /*
+     * Cache microstep resolution — sourced from TMC driver at loop entry.
+     * Does not change during motion (hardware constant), so calling
+     * motors_get_deg_per_microstep() once is safe and avoids 3 calls
+     * per iteration (~27,000 calls/s during fast slewing).
+     */
+    float deg_per_step = motors_get_deg_per_microstep();
+    float half_step    = deg_per_step * 0.5f;
+
+    while (s_motion.motion_active) {
         int64_t now = esp_timer_get_time();
-        int64_t next_ra_step_us = now;
-        int64_t next_dec_step_us = now;
-        bool motion_active = true;
 
-        while (motors_state.status == MOUNT_STATUS_SLEWING ||
-               motors_state.status == MOUNT_STATUS_TRACKING) {
-            float ra_target = motors_motion_target_ra_deg;
-            float dec_target = motors_motion_target_dec_deg;
+        /*
+         * 1+2. Throttled checks — queue poll and motion conditions.
+         *
+         * xQueueReceive is a FreeRTOS kernel call that enters a critical
+         * section. Calling it on every microstep (~9,100/s at 16 °/s)
+         * wastes CPU and adds per-step jitter.  500 us is frequent enough
+         * for sub-ms command latency while cutting kernel calls by ~80 %.
+         */
+        if (now - last_check_us >= 500) {
+            last_check_us = now;
 
-            /* Ramped velocities for slewing; tracking passes through unchanged */
-            float ra_vel = ramped_velocity(motors_state.ra_velocity,
-                                           motors_state.ra_position,
-                                           motors_motion_start_ra_deg, ra_target);
-            float dec_vel = ramped_velocity(motors_state.dec_velocity,
-                                            motors_state.dec_position,
-                                            motors_motion_start_dec_deg, dec_target);
+            MotionCommand cmd;
+            if (xQueueReceive(motion_cmd_queue, &cmd, 0) == pdTRUE) {
+                int incoming_prio = motion_cmd_priority(cmd.type);
+                int current_prio  = motion_cmd_priority(s_motion.active_cmd_type);
 
-            uint32_t ra_period = step_period_us(ra_vel);
-            uint32_t dec_period = step_period_us(dec_vel);
-
-            now = esp_timer_get_time();
-
-            float deg_per_step_local = motors_get_deg_per_microstep();
-            bool ra_has_target =
-                    fabsf(ra_target - motors_state.ra_position) >= (deg_per_step_local * 0.5f);
-
-            bool dec_has_target =
-                    fabsf(dec_target - motors_state.dec_position) >= (deg_per_step_local * 0.5f);
-
-            /*
-             * Check for completion (slew mode only).
-             * Tracking mode runs open-ended until externally stopped.
-             */
-            if (motors_state.status == MOUNT_STATUS_SLEWING &&
-                !ra_has_target && !dec_has_target) {
-                motors_state.status = MOUNT_STATUS_READY;
-                motors_state.tracking = TRACKING_NONE;
-                motors_state.last_update = esp_timer_get_time();
-                motion_active = false;
-
-                ESP_LOGI(TAG, "Slew complete: RA=%.4f DEC=%.4f",
-                         motors_state.ra_position, motors_state.dec_position);
-                break;
+                if (incoming_prio < current_prio) {
+                    ESP_LOGI(TAG, "Preempting cmd %d with higher-priority cmd %d",
+                             s_motion.active_cmd_type, cmd.type);
+                    process_command(cmd);
+                    if (!s_motion.motion_active) return;
+                    next_ra_us  = esp_timer_get_time();
+                    next_dec_us = next_ra_us;
+                    last_ramp_recalc_us = 0;
+                    /* Refresh cached resolution after command switch. */
+                    deg_per_step = motors_get_deg_per_microstep();
+                    half_step    = deg_per_step * 0.5f;
+                    continue;
+                }
             }
 
-            /*
-             * Check for external tracking stop.
-             */
-            if ((motors_state.tracking == TRACKING_NONE ||
-                 motors_state.tracking == TRACKING_MANUAL) &&
-                motors_state.status == MOUNT_STATUS_TRACKING) {
-                motors_state.status = MOUNT_STATUS_READY;
-                motors_state.last_update = esp_timer_get_time();
-                motion_active = false;
-
-                ESP_LOGI(TAG, "Tracking stopped: RA=%.4f DEC=%.4f",
-                         motors_state.ra_position, motors_state.dec_position);
-                break;
-            }
-
-            /*
-             * Choose timing strategy based on the shorter step period.
-             * For tracking (~421ms period), yield CPU with vTaskDelay.
-             * For slewing (down to ~55µs), use busy-wait precision loop.
-             */
-            uint32_t min_period = (ra_period < dec_period) ? ra_period : dec_period;
-
-            if (min_period > BUSYWAIT_THRESHOLD_US) {
-                /* === LOW-SPEED MODE (tracking, slow slews) ===
-                 * Step period is long enough that vTaskDelay is adequate.
-                 * The TMC2209 interpolator provides smooth motion internally.
-                 */
-                if (ra_has_target && now >= next_ra_step_us) {
-                    step_axis_ra(ra_target);
-                    next_ra_step_us += ra_period;
-                    if (next_ra_step_us < now) {
-                        next_ra_step_us = now + ra_period;
-                    }
-                }
-
-                if (dec_has_target && now >= next_dec_step_us) {
-                    step_axis_dec(dec_target);
-                    next_dec_step_us += dec_period;
-                    if (next_dec_step_us < now) {
-                        next_dec_step_us = now + dec_period;
-                    }
-                }
-
-                motors_state.last_update = now;
-                vTaskDelay(pdMS_TO_TICKS(10));
-            } else {
-                /* === HIGH-SPEED MODE (slewing at max speed) ===
-                 * Use a tight busy-wait loop with the shortest period to
-                 * guarantee microsecond-level step timing precision.
-                 */
-                while (motion_active && (motors_state.status == MOUNT_STATUS_SLEWING ||
-                                         motors_state.status == MOUNT_STATUS_TRACKING)) {
-                    now = esp_timer_get_time();
-
-                    /* Re-check targets on each iteration for responsiveness */
-                    ra_target = motors_motion_target_ra_deg;
-                    dec_target = motors_motion_target_dec_deg;
-                    float dps_local = motors_get_deg_per_microstep();
-                    ra_has_target = fabsf(ra_target - motors_state.ra_position) >= (dps_local * 0.5f);
-                    dec_has_target = fabsf(dec_target - motors_state.dec_position) >= (dps_local * 0.5f);
-
-                    /* Exit conditions */
-                    if (!ra_has_target && !dec_has_target) {
-                        if (motors_state.status == MOUNT_STATUS_SLEWING) {
-                            motors_state.status = MOUNT_STATUS_READY;
-                            motors_state.tracking = TRACKING_NONE;
-                            ESP_LOGI(TAG, "Slew complete (fast): RA=%.4f DEC=%.4f",
-                                     motors_state.ra_position, motors_state.dec_position);
-                        }
-                        break;
-                    }
-
-                    if ((motors_state.tracking == TRACKING_NONE ||
-                         motors_state.tracking == TRACKING_MANUAL) &&
-                        motors_state.status == MOUNT_STATUS_TRACKING) {
-                        motors_state.status = MOUNT_STATUS_READY;
-                        break;
-                    }
-
-                    /* Recalculate ramped periods every ~200 steps for smooth ramps.
-                       Uses next_ra_step_us advance as a cheap step counter. */
-                    {
-                        static int64_t last_recalc_us = 0;
-                        if (now - last_recalc_us > 5000) { /* every ~5ms */
-                            float rv = ramped_velocity(motors_state.ra_velocity,
-                                                       motors_state.ra_position,
-                                                       motors_motion_start_ra_deg, ra_target);
-                            float dv = ramped_velocity(motors_state.dec_velocity,
-                                                       motors_state.dec_position,
-                                                       motors_motion_start_dec_deg, dec_target);
-                            ra_period = step_period_us(rv);
-                            dec_period = step_period_us(dv);
-                            last_recalc_us = now;
-                        }
-                    }
-
-                    /* Step RA if due */
-                    if (ra_has_target && now >= next_ra_step_us) {
-                        step_axis_ra(ra_target);
-                        next_ra_step_us += ra_period;
-                        if (next_ra_step_us <= now) {
-                            next_ra_step_us = now + ra_period;
-                        }
-                    }
-
-                    /* Step DEC if due */
-                    if (dec_has_target && now >= next_dec_step_us) {
-                        step_axis_dec(dec_target);
-                        next_dec_step_us += dec_period;
-                        if (next_dec_step_us <= now) {
-                            next_dec_step_us = now + dec_period;
-                        }
-                    }
-
-                    motors_state.last_update = now;
-
-                    /* Small yield to prevent watchdog starvation on very long slews */
-                    if ((now & 0x7FF) == 0) {
-                        /* every ~2ms at 55µs periods */
-                        taskYIELD();
-                    }
-                }
-
-                /* Exit the outer loop since inner loop handles completion */
-                if (!motion_active) break;
-                if (motors_state.status != MOUNT_STATUS_SLEWING &&
-                    motors_state.status != MOUNT_STATUS_TRACKING)
-                    break;
-            }
+            if (!check_motion_conditions(deg_per_step)) break;
         }
 
-        ESP_LOGI(TAG, "Motion task idle (status=%d)", motors_state.status);
+        /* 3. Recalculate ramped velocities (throttled to every ~5 ms). */
+        if (now - last_ramp_recalc_us > 5000) {
+            float rv = ramped_velocity(motors_state.ra_velocity,
+                                       motors_state.ra_position,
+                                       s_motion.ra_start, s_motion.ra_target);
+            float dv = ramped_velocity(motors_state.dec_velocity,
+                                       motors_state.dec_position,
+                                       s_motion.dec_start, s_motion.dec_target);
+            ra_period  = step_period_us(rv);
+            dec_period = step_period_us(dv);
+            last_ramp_recalc_us = now;
+        }
+
+        /* 4. Step axes that are due — uses cached deg_per_step. */
+        bool ra_due = (now >= next_ra_us) &&
+            fabsf(s_motion.ra_target - motors_state.ra_position) >= half_step;
+        bool dec_due = (now >= next_dec_us) &&
+            fabsf(s_motion.dec_target - motors_state.dec_position) >= half_step;
+
+        if (ra_due) {
+            step_axis_ra(s_motion.ra_target, deg_per_step);
+            next_ra_us += ra_period;
+            if (next_ra_us <= now) next_ra_us = now + ra_period;
+        }
+
+        if (dec_due) {
+            step_axis_dec(s_motion.dec_target, deg_per_step);
+            next_dec_us += dec_period;
+            if (next_dec_us <= now) next_dec_us = now + dec_period;
+        }
+
+        motors_state.last_update = now;
+
+        /* 5. Smart wait — single strategy selection per iteration. */
+        int64_t next_step = (next_ra_us < next_dec_us) ? next_ra_us : next_dec_us;
+        int64_t wait_us   = next_step - esp_timer_get_time();
+
+        if (wait_us > BUSYWAIT_THRESHOLD_US) {
+            /*
+             * SLOW mode (tracking / slow slews).
+             *
+             * FreeRTOS vTaskDelay has ±10 ms jitter at the 100 Hz tick rate.
+             * For sidereal tracking (~210 ms period) this would introduce
+             * ~5 % period jitter — visible as periodic error in long exposures.
+             *
+             * Strategy: sleep via vTaskDelay until ~2 ms before the step,
+             * then fine-wait the remainder with busy-wait for µs precision.
+             * Command queue is checked during the fine-wait window.
+             */
+            int64_t fine_margin_us = 2000; /* 2 ms fine-wait window */
+
+            if (wait_us > fine_margin_us) {
+                int64_t sleep_us = wait_us - fine_margin_us;
+                /* Cap at 50 ms to poll the command queue regularly. */
+                uint32_t sleep_ms = (sleep_us / 1000 > 50) ? 50 : (uint32_t)(sleep_us / 1000);
+                if (sleep_ms < 1) sleep_ms = 1;
+                vTaskDelay(pdMS_TO_TICKS(sleep_ms));
+            }
+
+            /* Fine-wait: busy-wait the remaining margin for precise step timing.
+             * Poll the command queue every ~512 us for preemption commands. */
+            while (esp_timer_get_time() < next_step) {
+                if ((esp_timer_get_time() & 0x1FF) == 0) {
+                    MotionCommand preempt_cmd;
+                    if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
+                        if (motion_cmd_priority(preempt_cmd.type) <
+                            motion_cmd_priority(s_motion.active_cmd_type)) {
+                            ESP_LOGI(TAG, "Preempting cmd %d with higher-priority cmd %d (slow path)",
+                                     s_motion.active_cmd_type, preempt_cmd.type);
+                            process_command(preempt_cmd);
+                            if (!s_motion.motion_active) return;
+                            next_ra_us  = esp_timer_get_time();
+                            next_dec_us = next_ra_us;
+                            last_ramp_recalc_us = 0;
+                            break; /* exit fine-wait, re-enter outer loop */
+                        }
+                    }
+                }
+            }
+        } else if (wait_us > 100) {
+            /*
+             * FAST mode: busy-wait with periodic queue checks and yields.
+             * Poll queue and yield every ~512 us to keep the scheduler alive.
+             */
+            while (esp_timer_get_time() < next_step) {
+                if ((esp_timer_get_time() & 0x1FF) == 0) {
+                    MotionCommand preempt_cmd;
+                    if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
+                        if (motion_cmd_priority(preempt_cmd.type) <
+                            motion_cmd_priority(s_motion.active_cmd_type)) {
+                            ESP_LOGI(TAG, "Preempting cmd %d with higher-priority cmd %d (fast path)",
+                                     s_motion.active_cmd_type, preempt_cmd.type);
+                            process_command(preempt_cmd);
+                            if (!s_motion.motion_active) return;
+                            next_ra_us  = esp_timer_get_time();
+                            next_dec_us = next_ra_us;
+                            last_ramp_recalc_us = 0;
+                            break; /* exit inner spin, re-enter outer loop */
+                        }
+                    }
+                    taskYIELD();
+                }
+            }
+        }
+        /* else: wait_us <= 100 us — step is due immediately, just loop. */
+    }
+}
+
+/* --------------------------------------------------------------------------
+ * Motion task entry point.
+ *
+ * Blocks on the command queue when idle. When a motion-producing command
+ * arrives (SLEW or TRACK), enters the unified motion_loop().
+ * Non-motion commands (STOP, PARK, SYNC, etc.) are handled inline and
+ * the task returns to blocking on the queue.
+ * -------------------------------------------------------------------------- */
+static void motors_motion_task_run(void *arg) {
+    (void)arg;
+
+    while (true) {
+        MotionCommand cmd;
+        if (xQueueReceive(motion_cmd_queue, &cmd, portMAX_DELAY) != pdTRUE)
+            continue;
+
+        process_command(cmd);
+
+        if (cmd.type == MOTION_CMD_SLEW || cmd.type == MOTION_CMD_TRACK ||
+            cmd.type == MOTION_CMD_MOVE_AXIS) {
+            motion_loop();
+        }
     }
 }
 
@@ -381,6 +575,9 @@ static void motors_motion_task_run(void *arg) {
  * -------------------------------------------------------------------------- */
 
 void motors_motion_init(void) {
+    /* Create the command queue before the task so it's ready on first use. */
+    motors_motion_cmd_queue_create();
+
     xTaskCreate(
         motors_motion_task_run,
         "motors_motion",
@@ -392,16 +589,4 @@ void motors_motion_init(void) {
     motors_motion_hw_init();
 
     ESP_LOGI(TAG, "Motion task created");
-}
-
-void motors_motion_start(float ra_target_deg, float dec_target_deg) {
-    motors_motion_target_ra_deg = ra_target_deg;
-    motors_motion_target_dec_deg = dec_target_deg;
-
-    /* Capture start positions for slew acceleration ramps. */
-    motors_motion_start_ra_deg = motors_state.ra_position;
-    motors_motion_start_dec_deg = motors_state.dec_position;
-
-    if (s_motion_task_handle != NULL)
-        xTaskNotifyGive(s_motion_task_handle);
 }

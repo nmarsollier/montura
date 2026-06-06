@@ -5,14 +5,14 @@
 #include "motors.h"
 
 #include "esp_log.h"
-#include "esp_timer.h"
 #include "motors_internal.h"
 #include "motors_motion.h"
 
 static const char *TAG = "MOTORS_SLEW_AXIS";
 
 /*
- * Validate a relative axis move request and delegate to the motion subsystem.
+ * Validate a relative axis move request and delegate to the motion subsystem
+ * via the priority-aware command queue.
  */
 MotorResultCode motors_slew_axis_ra(float degrees, int speed) {
   if (motors_state.status != MOUNT_STATUS_READY) {
@@ -28,9 +28,13 @@ MotorResultCode motors_slew_axis_ra(float degrees, int speed) {
     return MOTOR_ERR_OUT_OF_RANGE;
   }
   motors_set_axis_velocity_ra(actual_speed);
-  motors_state.status = MOUNT_STATUS_SLEWING;
+
+  /* Soft gate — visible to status readers immediately. */
+  motors_state.status   = MOUNT_STATUS_SLEWING;
   motors_state.tracking = TRACKING_NONE;
-  motors_motion_start(target, motors_state.dec_position);
+
+  motors_motion_slew(target, motors_state.dec_position,
+                             actual_speed, motors_state.dec_velocity);
   ESP_LOGI(TAG, "Slew RA by %.3f -> target=%.3f (speed=%.6f)", degrees, target, actual_speed);
 
   return MOTOR_OK;
@@ -50,11 +54,14 @@ MotorResultCode motors_slew_axis_dec(float degrees, int speed) {
     return MOTOR_ERR_OUT_OF_RANGE;
   }
   motors_set_axis_velocity_dec(actual_speed);
-  motors_state.status = MOUNT_STATUS_SLEWING;
+
+  /* Soft gate — visible to status readers immediately. */
+  motors_state.status   = MOUNT_STATUS_SLEWING;
   motors_state.tracking = TRACKING_NONE;
-  motors_motion_start(motors_state.ra_position, target);
+
+  motors_motion_slew(motors_state.ra_position, target,
+                             motors_state.ra_velocity, actual_speed);
   ESP_LOGI(TAG, "Slew DEC by %.3f -> target=%.3f (speed=%.6f)", degrees, target, actual_speed);
 
   return MOTOR_OK;
 }
-

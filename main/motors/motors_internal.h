@@ -37,7 +37,7 @@ bool motors_is_valid_dec(float value);
  * Formula: factor = commanded_angle / actual_angle
  * Example:  2.0 = 180° / 90°
  */
-#define MOTION_CALIBRATION_FACTOR 2.0f
+#define MOTION_CALIBRATION_FACTOR 1.0f
 
 /* --------------------------------------------------------------------------
  * Microstep and step resolution — sourced from TMC hardware

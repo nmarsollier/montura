@@ -1,3 +1,7 @@
+/* Motors - motors_get_tracking_speed.c
+ *
+ * Purpose: return the angular speed for a given tracking mode.
+ */
 #include "motors.h"
 
 /*

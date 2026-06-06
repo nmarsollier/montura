@@ -76,3 +76,5 @@ managed_components/
 CONTINUE.md
 .clangd
 .github/copilot-instructions.md
+
+.cache/

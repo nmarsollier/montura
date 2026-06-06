@@ -10,30 +10,74 @@
  * motors_motion — hardware motion execution layer.
  *
  * Owns the FreeRTOS motion task and all step-level execution.
- * Receives instructions from the motors module and drives axis positions
- * autonomously until the requested motion is complete or cancelled.
+ * Receives commands from the motors module via a priority-aware queue
+ * and drives axis positions autonomously until the requested motion
+ * is complete or preempted by a higher-priority command.
  *
- * Future home for TMC2209 STEP/DIR GPIO control.
+ * The motion task is the single writer of motors_state position fields,
+ * guaranteeing thread-safe state transitions without locks.
  */
 
 /*
- * Initialize the motion subsystem and create the background task.
+ * Initialize the motion subsystem, create the command queue, and
+ * start the background motion task.
  * Must be called once from motors_init() before any motion is requested.
  */
 void motors_motion_init(void);
 
-/*
- * Start motion toward absolute axis targets (degrees).
- * Sets the task targets and wakes the motion task.
- * The task reads motors_state.status to determine whether to slew or track.
- */
-void motors_motion_start(float ra_target_deg, float dec_target_deg);
+/* --------------------------------------------------------------------------
+ * Command queue API — thread-safe, priority-aware.
+ *
+ * These functions are the canonical way to request motion from the
+ * motors layer. Each builds a MotionCommand and sends it to the
+ * motion task's FreeRTOS queue.
+ *
+ * Priority order (highest to lowest):
+ *   STOP / PARK / DISABLE  → preempt everything
+ *   TRACK                  → preempts SLEW
+ *   SLEW / ENABLE          → normal
+ *   SYNC                   → lowest
+ * -------------------------------------------------------------------------- */
+
+/* Request a slew to absolute axis targets (degrees) at the given velocities. */
+void motors_motion_slew(float ra_target_deg, float dec_target_deg,
+                                 float ra_velocity, float dec_velocity);
+
+/* Request continuous tracking. Preempts any in-progress slew. */
+void motors_motion_track(TrackingMode mode, float ra_velocity);
 
 /*
- * Align internal motion targets to the given positions without starting motion.
- * Used after a sync operation to prevent spurious movement.
+ * Request continuous single-axis velocity motion.
+ * rate_ra / rate_dec in deg/s — positive = forward, negative = reverse,
+ * zero = stop that axis.  When both reach zero the status returns to READY.
+ * Used by Alpaca MoveAxis, manual buttons, joystick, and guiding.
+ */
+void motors_motion_move_axis(float rate_ra, float rate_dec);
+
+/* Request an immediate stop. Preempts everything. */
+void motors_motion_stop(void);
+
+/* Request park state. Preempts everything. */
+void motors_motion_park(void);
+
+/* Request disable state. Preempts everything. */
+void motors_motion_disable(void);
+
+/* Request enable (motors on, status READY). */
+void motors_motion_enable(void);
+
+/*
+ * Align the internal position model to the given axis angles.
+ * Does not move the motors — only updates the authoritative position.
  */
 void motors_motion_sync(float ra_axis_deg, float dec_axis_deg);
+
+/* Internal: create the command queue. Called from motors_motion_init(). */
+void motors_motion_cmd_queue_create(void);
+
+/* --------------------------------------------------------------------------
+ * Hardware layer — STEP/DIR GPIO control.
+ * -------------------------------------------------------------------------- */
 
 typedef enum {
     MOTOR_DIRECTION_NEGATIVE = 0,
@@ -50,6 +94,6 @@ void motors_motion_hw_set_direction_ra(MotorDirection direction);
 
 void motors_motion_hw_set_direction_dec(MotorDirection direction);
 
-void motors_motion_hw_step_ra();
+void motors_motion_hw_step_ra(void);
 
-void motors_motion_hw_step_dec();
+void motors_motion_hw_step_dec(void);

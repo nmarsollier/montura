@@ -1,38 +1,53 @@
-@baseUrl = http://localhost:8080
+@baseUrl = http://{{host}}/api
+@alpacaBase = http://{{host}}/api/v1/telescope/0
+@managementBase = http://{{host}}/management/v1
 
-### Root / Screen
-GET {{baseUrl}}/
+# ═══════════════════════════════════════════════════════════════
+# Montura HTTP API Reference
+#
+# Both APIs share a single HTTP server on port 80.
+# Set `host` in your .env or override here.
+# ═══════════════════════════════════════════════════════════════
 
-GET {{baseUrl}}/api/screen  # alias of /
+### ─── Variables ────────────────────────────────────────────────
+@host = localhost
+@cid = 1
+@txid = {{$randomInt}}
+
+# ═══════════════════════════════════════════════════════════════
+# REST API — Custom endpoints
+# ═══════════════════════════════════════════════════════════════
+
+### Root / Screen (embedded SPA)
+GET http://{{host}}/
 
 ### Status
-GET {{baseUrl}}/api/status
+GET {{baseUrl}}/status
 
-# Response example (RA as HH:MM:SS.ss, DEC as ±DD:MM:SS.ss)
-```
-{
-  "status": "ready",
-  "tracking": "sidereal",
-  "ra": "12:20:42.00",
-  "dec": "-32:07:12.00",
-  "settings": {
-    "lat": -32.890800,
-    "lon": -68.827200,
-    "elevation": 750
-  }
-}
-```
+# Response example
+# {
+#   "status": "ready",
+#   "tracking": "sidereal",
+#   "ra": "12:20:42.00",
+#   "dec": "-32:07:12.00",
+#   "settings": {
+#     "lat": -32.890800,
+#     "lon": -68.827200,
+#     "elevation": 750
+#   }
+# }
 
-### Tracking
-POST {{baseUrl}}/api/tracking
+### Tracking — set tracking mode
+POST {{baseUrl}}/tracking
 Content-Type: application/json
 
 {
-  "tracking": "sidereal"    # one of: "none","manual","sidereal","lunar","solar"
+  "tracking": "sidereal"
 }
+# Valid values: none | manual | sidereal | lunar | solar
 
-### Goto
-POST {{baseUrl}}/api/goto
+### Goto — slew to equatorial coordinates
+POST {{baseUrl}}/goto
 Content-Type: application/json
 
 {
@@ -40,49 +55,438 @@ Content-Type: application/json
   "dec": -20.123,
   "speed": 2
 }
+# ra: hours (0–24), dec: degrees (-90–90), speed: 0–3
 
-### Stop
-POST {{baseUrl}}/api/stop
+### Move Axis — relative single-axis move
+POST {{baseUrl}}/move-axis
+Content-Type: application/json
 
-### Park
-POST {{baseUrl}}/api/park
+{
+  "axis": "ra",
+  "degrees": 15.0,
+  "speed": 2
+}
+# axis: ra | dec, degrees: relative delta, speed: 0–3
 
-### Unpark
-POST {{baseUrl}}/api/unpark
+### Stop — halt all motion
+POST {{baseUrl}}/stop
 
-### Sync
-POST {{baseUrl}}/api/sync
+### Park — park the mount
+POST {{baseUrl}}/park
+
+### Unpark — take mount out of parked state
+POST {{baseUrl}}/unpark
+
+### Sync — align pointing model to known coordinates
+POST {{baseUrl}}/sync
 Content-Type: application/json
 
 {
   "ra": 10.234,
   "dec": -20.123
 }
+# ra: hours (0–24), dec: degrees (-90–90)
 
-### Move Axis
-POST {{baseUrl}}/api/move-axis
+### Home — slew to home position
+POST {{baseUrl}}/home
+
+### Settings — update site location and system time
+POST {{baseUrl}}/settings
 Content-Type: application/json
 
 {
-  "axis": "ra",      # "ra" or "dec"
-  "degrees": 15.0,
-  "speed": 2
-}
-
-### Settings
-POST {{baseUrl}}/api/settings
-Content-Type: application/json
-
-{
-  "time": "2026-05-28T10:00:00-03:00",
+  "time": "2026-06-05T10:00:00-03:00",
   "lat": -32.8908,
   "lon": -68.8272,
   "elevation": 750
 }
 
-### Command responses
-All command endpoints return the standard command result JSON:
-```
-{"ok": true, "message": "..."}
-```
-On rejection the HTTP status is `409 Conflict` with `{"ok": false, "message": "reason"}`
+### Wi-Fi Config — set station credentials
+POST {{baseUrl}}/wifi-config
+Content-Type: application/json
+
+{
+  "ssid": "MyWiFi",
+  "password": "secret123"
+}
+
+### ─── REST command responses ────────────────────────────────────
+# All command endpoints return:
+#   {"ok": true, "message": "..."}
+# On rejection: HTTP 409 with {"ok": false, "message": "reason"}
+
+
+# ═══════════════════════════════════════════════════════════════
+# Alpaca Management API
+# ═══════════════════════════════════════════════════════════════
+
+### API versions
+GET {{managementBase}}/apiversions
+
+### Server description
+GET {{managementBase}}/description
+
+### Configured devices
+GET {{managementBase}}/configureddevices
+
+
+# ═══════════════════════════════════════════════════════════════
+# Alpaca Telescope API — Common device endpoints
+# ═══════════════════════════════════════════════════════════════
+
+### Connected (GET)
+GET {{alpacaBase}}/connected?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Connected (PUT)
+PUT {{alpacaBase}}/connected?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+Connected=true
+
+### Description
+GET {{alpacaBase}}/description?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Driver info
+GET {{alpacaBase}}/driverinfo?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Driver version
+GET {{alpacaBase}}/driverversion?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Interface version
+GET {{alpacaBase}}/interfaceversion?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Name
+GET {{alpacaBase}}/name?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Supported actions
+GET {{alpacaBase}}/supportedactions?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+
+# ═══════════════════════════════════════════════════════════════
+# Alpaca Telescope API — Capabilities (all return bool Value)
+# ═══════════════════════════════════════════════════════════════
+
+### CanFindHome
+GET {{alpacaBase}}/canfindhome?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanPark
+GET {{alpacaBase}}/canpark?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanPulseGuide
+GET {{alpacaBase}}/canpulseguide?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSetDeclinationRate
+GET {{alpacaBase}}/cansetdeclinationrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSetGuideRates
+GET {{alpacaBase}}/cansetguiderates?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSetPark
+GET {{alpacaBase}}/cansetpark?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSetPierSide
+GET {{alpacaBase}}/cansetpierside?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSetRightAscensionRate
+GET {{alpacaBase}}/cansetrightascensionrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSetTracking
+GET {{alpacaBase}}/cansettracking?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSlew
+GET {{alpacaBase}}/canslew?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSlewAltAz
+GET {{alpacaBase}}/canslewaltaz?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSlewAltAzAsync
+GET {{alpacaBase}}/canslewaltazasync?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSlewAsync
+GET {{alpacaBase}}/canslewasync?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSync
+GET {{alpacaBase}}/cansync?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanSyncAltAz
+GET {{alpacaBase}}/cansyncaltaz?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanUnpark
+GET {{alpacaBase}}/canunpark?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### CanMoveAxis
+GET {{alpacaBase}}/canmoveaxis?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+
+# ═══════════════════════════════════════════════════════════════
+# Alpaca Telescope API — Properties (GET)
+# ═══════════════════════════════════════════════════════════════
+
+### AlignmentMode
+GET {{alpacaBase}}/alignmentmode?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Altitude
+GET {{alpacaBase}}/altitude?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### ApertureArea
+GET {{alpacaBase}}/aperturearea?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### ApertureDiameter
+GET {{alpacaBase}}/aperturediameter?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### AtHome
+GET {{alpacaBase}}/athome?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### AtPark
+GET {{alpacaBase}}/atpark?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Azimuth
+GET {{alpacaBase}}/azimuth?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Declination
+GET {{alpacaBase}}/declination?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### DeclinationRate
+GET {{alpacaBase}}/declinationrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### EquatorialSystem
+GET {{alpacaBase}}/equatorialsystem?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### FocalLength
+GET {{alpacaBase}}/focallength?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### GuideRateDeclination
+GET {{alpacaBase}}/guideratedeclination?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### GuideRateRightAscension
+GET {{alpacaBase}}/guideraterightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### IsPulseGuiding
+GET {{alpacaBase}}/ispulseguiding?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### RightAscension
+GET {{alpacaBase}}/rightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### RightAscensionRate
+GET {{alpacaBase}}/rightascensionrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SideOfPier
+GET {{alpacaBase}}/sideofpier?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SiderealTime
+GET {{alpacaBase}}/siderealtime?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SiteElevation
+GET {{alpacaBase}}/siteelevation?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SiteLatitude
+GET {{alpacaBase}}/sitelatitude?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SiteLongitude
+GET {{alpacaBase}}/sitelongitude?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Slewing
+GET {{alpacaBase}}/slewing?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SlewSettleTime
+GET {{alpacaBase}}/slewsettletime?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### TargetDeclination
+GET {{alpacaBase}}/targetdeclination?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### TargetRightAscension
+GET {{alpacaBase}}/targetrightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Tracking
+GET {{alpacaBase}}/tracking?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### TrackingRate
+GET {{alpacaBase}}/trackingrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### TrackingRates
+GET {{alpacaBase}}/trackingrates?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### UTCDate
+GET {{alpacaBase}}/utcdate?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### AxisRates (mock)
+GET {{alpacaBase}}/axisrates?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### DoesRefraction (mock)
+GET {{alpacaBase}}/doesrefraction?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### DestinationSideOfPier (mock)
+GET {{alpacaBase}}/destinationsideofpier?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+
+# ═══════════════════════════════════════════════════════════════
+# Alpaca Telescope API — Methods (PUT)
+# ═══════════════════════════════════════════════════════════════
+
+### AbortSlew
+PUT {{alpacaBase}}/abortslew?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### FindHome
+PUT {{alpacaBase}}/findhome?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Park
+PUT {{alpacaBase}}/park?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### Unpark
+PUT {{alpacaBase}}/unpark?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SetPark
+PUT {{alpacaBase}}/setpark?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SlewToCoordinatesAsync
+PUT {{alpacaBase}}/slewtocoordinatesasync?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+RightAscension=10.234&Declination=-20.123
+
+### SlewToCoordinates (alias)
+PUT {{alpacaBase}}/slewtocoordinates?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+RightAscension=10.234&Declination=-20.123
+
+### SlewToAltAzAsync
+PUT {{alpacaBase}}/slewtoaltazasync?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+Azimuth=180.0&Altitude=45.0
+
+### SyncToCoordinates
+PUT {{alpacaBase}}/synctocoordinates?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+RightAscension=10.234&Declination=-20.123
+
+### SyncToAltAz
+PUT {{alpacaBase}}/synctoaltaz?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+Azimuth=180.0&Altitude=45.0
+
+### SlewToTargetAsync
+PUT {{alpacaBase}}/slewtotargetasync?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SlewToTarget (alias)
+PUT {{alpacaBase}}/slewtotarget?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### SyncToTarget
+PUT {{alpacaBase}}/synctotarget?ClientID={{cid}}&ClientTransactionID={{txid}}
+
+### PulseGuide
+PUT {{alpacaBase}}/pulseguide?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+Direction=0&Duration=500
+
+### MoveAxis
+PUT {{alpacaBase}}/moveaxis?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+Axis=0&Rate=4.0
+# Axis: 0=RA, 1=DEC; Rate: deg/s (positive/negative)
+
+# ═══════════════════════════════════════════════════════════════
+# Alpaca Telescope API — Property setters (PUT)
+# ═══════════════════════════════════════════════════════════════
+
+### Tracking (PUT)
+PUT {{alpacaBase}}/tracking?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+Tracking=true
+
+### TrackingRate (PUT)
+PUT {{alpacaBase}}/trackingrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+TrackingRate=0
+# 0=sidereal, 1=lunar, 2=solar
+
+### UTCDate (PUT)
+PUT {{alpacaBase}}/utcdate?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+UTCDate=2026-06-05T20:15:00
+
+### SiteLatitude (PUT)
+PUT {{alpacaBase}}/sitelatitude?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+SiteLatitude=-32.8908
+
+### SiteLongitude (PUT)
+PUT {{alpacaBase}}/sitelongitude?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+SiteLongitude=-68.8272
+
+### SiteElevation (PUT)
+PUT {{alpacaBase}}/siteelevation?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+SiteElevation=750
+
+### TargetRightAscension (PUT)
+PUT {{alpacaBase}}/targetrightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+TargetRightAscension=10.234
+
+### TargetDeclination (PUT)
+PUT {{alpacaBase}}/targetdeclination?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+TargetDeclination=-20.123
+
+### SideOfPier (PUT)
+PUT {{alpacaBase}}/sideofpier?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+SideOfPier=0
+# 0=East, 1=West
+
+### SlewSettleTime (PUT)
+PUT {{alpacaBase}}/slewsettletime?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+SlewSettleTime=5
+
+### DeclinationRate (PUT)
+PUT {{alpacaBase}}/declinationrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+DeclinationRate=0.0
+
+### RightAscensionRate (PUT)
+PUT {{alpacaBase}}/rightascensionrate?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+RightAscensionRate=0.0
+
+### GuideRateDeclination (PUT)
+PUT {{alpacaBase}}/guideratedeclination?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+GuideRateDeclination=0.5
+
+### GuideRateRightAscension (PUT)
+PUT {{alpacaBase}}/guideraterightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
+Content-Type: application/x-www-form-urlencoded
+
+GuideRateRightAscension=0.5
+
+### ─── Alpaca response format ────────────────────────────────────
+# Every Alpaca response follows this structure:
+# {
+#   "Value": ...,
+#   "ClientTransactionID": 1,
+#   "ServerTransactionID": 1,
+#   "ErrorNumber": 0,
+#   "ErrorMessage": ""
+# }
+# ErrorNumber 0 = success; non-zero = ASCOM error code.

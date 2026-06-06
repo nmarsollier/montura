@@ -28,7 +28,7 @@ MountResult mount_set_tracking(TrackingMode tracking) {
         }
     }
 
-    ESP_LOGI(TAG, "Tracking changed to %d", tracking);
+    ESP_LOGI(TAG, "Tracking changed to %s", tracking_to_string(tracking));
 
     return mount_result_ok("Tracking changed");
 }

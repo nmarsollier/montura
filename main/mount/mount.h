@@ -165,17 +165,21 @@ MountResult mount_home(void);
  */
 MountResult mount_move_axis(MotorAxis axis, float degrees, int speed);
 
+/*
+ * mount_move_axis_velocity
+ * ------------------------
+ * Move one or both axes continuously at the given rates in deg/s until
+ * a subsequent call with both rates = 0 (or STOP / PARK) halts motion.
+ * Positive = forward, negative = reverse.  Used by Alpaca MoveAxis and
+ * manual centering controls.
+ */
+MountResult mount_move_axis_velocity(float rate_ra, float rate_dec);
+
 /* Convert RA from HMS struct to decimal hours. */
 float mount_get_ra_hours(void);
 
 /* Convert DEC from DMS struct to decimal degrees. */
 float mount_get_dec_deg(void);
-
-const char *tracking_to_string(TrackingMode tracking);
-
-const char *tracking_valid_values(void);
-
-const char *status_to_string(MotorsStatus status);
 
 TrackingMode tracking_from_string(const char *value);
 

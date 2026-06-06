@@ -137,6 +137,14 @@ void motors_sync_position(float ra_axis_deg, float dec_axis_deg);
 MotorResultCode motors_start_tracking(TrackingMode mode);
 
 /*
+ * Move one or both axes continuously at the given rates in deg/s.
+ * Positive = forward, negative = reverse, zero = stop that axis.
+ * Both zero is equivalent to STOP.  Used by Alpaca MoveAxis and
+ * manual controls (buttons, joystick).
+ */
+void motors_move_axis_velocity(float rate_ra, float rate_dec);
+
+/*
  * Return the RA-axis angular velocity (deg/s) for a given `TrackingMode`.
  */
 float motors_get_tracking_speed(TrackingMode mode);
@@ -152,6 +160,15 @@ const char *motors_axis_to_string(MotorAxis axis);
 MotorAxis motors_axis_from_string(const char *value);
 
 const char *motors_axis_valid_values(void);
+
+/* Canonical status and tracking name helpers — implemented in motors_tools.c. */
+const char *status_to_string(MotorsStatus status);
+
+const char *tracking_to_string(TrackingMode tracking);
+
+TrackingMode tracking_from_string(const char *value);
+
+const char *tracking_valid_values(void);
 
 /* Move a single axis to an absolute angle in degrees. */
 MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed);

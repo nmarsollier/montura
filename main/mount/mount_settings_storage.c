@@ -48,8 +48,6 @@ void mount_settings_storage_load(MountSettings *settings) {
         return;
     }
 
-    (void) err; /* System time is not persisted with the settings. */
-
     uint32_t lat_u32;
     err = nvs_get_u32(nvs_handle, "lat", &lat_u32);
     if (err != ESP_OK) {
@@ -95,8 +93,6 @@ void mount_settings_storage_save(const MountSettings *settings) {
         ESP_LOGE(TAG, "Failed to open NVS namespace for writing: %s", esp_err_to_name(err));
         return;
     }
-
-    (void) err; /* System time is not persisted with the settings. */
 
     err = nvs_set_u32(nvs_handle, "lat", float_to_uint32(settings->lat));
     if (err != ESP_OK) {

@@ -1,11 +1,10 @@
-/* Runtime - rest_api_server.c
+/* Rest - rest_api_server.c
  *
- * Purpose: initialize the REST API HTTP server and register routes.
+ * Purpose: register REST API HTTP routes on the shared server.
  */
 #include "rest.h"
 #include "rest_tools.h"
 
-#include "esp_err.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 
@@ -14,21 +13,10 @@ static const char *TAG = "REST_API_SERVER";
 /*
  * Business use case: publish the device's REST surface.
  *
- * Objective: expose a single integration point for UI, bridges, and
- * automation clients.
+ * Objective: register all REST API routes on the given HTTP server so the UI,
+ * bridges, and automation clients share a single integration point.
  */
-void rest_server_start(void) {
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 16;
-
-    esp_err_t result = httpd_start(&server, &config);
-
-    if (result != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start REST server: %s", esp_err_to_name(result));
-        return;
-    }
-
+void rest_server_start(httpd_handle_t server) {
     rest_register_get(server, "/api/status", rest_status_handler);
     /* Serve the embedded SPA at the root path `/`. */
     rest_register_get(server, "/", rest_screen_handler);
@@ -44,5 +32,5 @@ void rest_server_start(void) {
     rest_register_post(server, "/api/settings", rest_settings_handler);
     rest_register_post(server, "/api/wifi-config", rest_wifi_handler);
 
-    ESP_LOGI(TAG, "REST server started");
+    ESP_LOGI(TAG, "REST routes registered");
 }

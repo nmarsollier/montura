@@ -1,3 +1,7 @@
+/* Mount - mount_visible_status.c
+ *
+ * Purpose: build the visible status snapshot for UI and API consumers.
+ */
 #include "mount.h"
 #include "mount_internal.h"
 

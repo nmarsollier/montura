@@ -2,6 +2,8 @@
 
 void setup_init(void);
 
+void runtime_http_start(void);
+
 void setup_runtime_start(void);
 
 typedef struct {

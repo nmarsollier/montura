@@ -1,5 +1,6 @@
-/*
- * motors_motion_hw.c — TMC2209 STEP/DIR GPIO control.
+/* MotorsMotion - motors_motion_hw.c
+ *
+ * Purpose: TMC2209 STEP/DIR GPIO control.
  *
  * Hardware configuration:
  *   - Driver: TMC2209 in STEP/DIR mode with UART configuration
@@ -11,9 +12,10 @@
  * STEP pulse timing:
  *   - TMC2209 minimum STEP high time: ~100 ns (datasheet)
  *   - Using 2 µs high + 2 µs low for reliable operation at high speeds
- *   - At 256 µsteps × 200 × 4 = 204,800 steps/rev
- *   - Max speed (32 °/s) = ~18,200 steps/s → period ~55 µs
- *   - Pulse (4 µs) comfortably fits within 55 µs window
+ *   - Effective steps/rev = 200 × 256 × 4 × MOTION_CALIBRATION_FACTOR
+ *     With calibration 2.0: 409,600 steps/rev
+ *   - Max speed (32 °/s) = 32/360 × 409,600 ≈ 36,400 steps/s → period ~27.5 µs
+ *   - Pulse (4 µs) = ~14.5 % duty cycle — within TMC2209 spec
  */
 
 #include "esp_log.h"

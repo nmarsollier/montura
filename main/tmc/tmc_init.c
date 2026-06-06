@@ -83,7 +83,7 @@
  *   - Reduced vibration and audible noise
  *   - Better response at low STEP frequencies
  */
-#define TMC_TARGET_MICROSTEPS 256
+#define TMC_TARGET_MICROSTEPS 128
 
 /*
  * Motor current configuration (IHOLD_IRUN register, addr 0x10).

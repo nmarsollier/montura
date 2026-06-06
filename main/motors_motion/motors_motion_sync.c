@@ -1,6 +1,8 @@
 /* MotorsMotion - motors_motion_sync.c
  *
- * Purpose: align motion targets with the authoritative axis positions.
+ * Purpose: align the internal position model to the given axis angles
+ * via the command queue for thread-safe execution.
+ * Does not move the motors — only updates the authoritative position.
  */
 #include "motors_motion.h"
 #include "motors_motion_internal.h"
@@ -9,9 +11,13 @@
 
 static const char *TAG = "MOTORS_MOTION_SYNC";
 
-void motors_motion_sync(float ra_axis_deg, float dec_axis_deg)
-{
-  motors_motion_target_ra_deg  = ra_axis_deg;
-  motors_motion_target_dec_deg = dec_axis_deg;
-  ESP_LOGI(TAG, "Motion targets synced: RA=%.4f DEC=%.4f", ra_axis_deg, dec_axis_deg);
+void motors_motion_sync(float ra_axis_deg, float dec_axis_deg) {
+    MotionCommand cmd = {
+        .type = MOTION_CMD_SYNC,
+        .ra_target_deg = ra_axis_deg,
+        .dec_target_deg = dec_axis_deg,
+        .tracking_mode = TRACKING_NONE,
+    };
+    motors_motion_cmd_send(&cmd, false);
+    ESP_LOGI(TAG, "Queued SYNC: RA=%.4f DEC=%.4f", ra_axis_deg, dec_axis_deg);
 }
