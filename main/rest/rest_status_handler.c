@@ -1,6 +1,7 @@
 #include "rest.h"
 
 #include <stdio.h>
+#include <time.h>
 
 #include "mount.h"
 
@@ -16,12 +17,20 @@
 esp_err_t rest_status_handler(httpd_req_t *request) {
     VisibleStatusData data = mount_get_visible_status_data();
 
+    /* Format current mount time as ISO 8601 for the UI. */
+    time_t now = time(NULL);
+    struct tm tm = {0};
+    gmtime_r(&now, &tm);
+    char time_buf[32];
+    strftime(time_buf, sizeof(time_buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
+
     static const char format[] =
             "{"
             "\"status\":\"%s\","
             "\"tracking\":\"%s\","
             "\"ra\":\"%02d:%02d:%05.2f\","
             "\"dec\":\"%c%02d:%02d:%05.2f\","
+            "\"time\":\"%s\","
             "\"settings\":{"
             "\"lat\":%.6f,"
             "\"lon\":%.6f,"
@@ -39,6 +48,7 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
                        status, tracking,
                        data.ra.hours, data.ra.minutes, data.ra.seconds,
                        dec_sign, data.dec.degrees, data.dec.minutes, data.dec.seconds,
+                       time_buf,
                        data.settings.lat, data.settings.lon, data.settings.elevation,
                        wifi_ap ? "true" : "false");
 
@@ -48,6 +58,7 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
              status, tracking,
              data.ra.hours, data.ra.minutes, data.ra.seconds,
              dec_sign, data.dec.degrees, data.dec.minutes, data.dec.seconds,
+             time_buf,
              data.settings.lat, data.settings.lon, data.settings.elevation,
              wifi_ap ? "true" : "false");
 

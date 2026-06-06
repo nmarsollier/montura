@@ -5,16 +5,16 @@
  * Hardware configuration:
  *   - Driver: TMC2209 in STEP/DIR mode with UART configuration
  *   - Motor: NEMA 17 (200 full steps/rev, 1.8°/step)
- *   - Microsteps: 256 (configured via UART, with hardware interpolation enabled)
+ *   - Microsteps: 128 (configured via UART, with hardware interpolation enabled)
  *   - Gear ratio: 20/80 (4:1)
  *   - Processor: ESP32 (240 MHz)
  *
  * STEP pulse timing:
  *   - TMC2209 minimum STEP high time: ~100 ns (datasheet)
  *   - Using 2 µs high + 2 µs low for reliable operation at high speeds
- *   - Effective steps/rev = 200 × 256 × 4 × MOTION_CALIBRATION_FACTOR
- *     With calibration 2.0: 409,600 steps/rev
- *   - Max speed (32 °/s) = 32/360 × 409,600 ≈ 36,400 steps/s → period ~27.5 µs
+ *   - Effective steps/rev = 200 × 128 × 4 × MOTION_CALIBRATION_FACTOR
+ *     With calibration 1.0: 102,400 steps/rev
+ *   - Max speed (32 °/s) = 32/360 × 102,400 ≈ 9,100 steps/s → period ~110 µs
  *   - Pulse (4 µs) = ~14.5 % duty cycle — within TMC2209 spec
  */
 

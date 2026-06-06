@@ -10,7 +10,7 @@
 # ═══════════════════════════════════════════════════════════════
 
 ### ─── Variables ────────────────────────────────────────────────
-@host = localhost
+@host = 192.168.0.231
 @cid = 1
 @txid = {{$randomInt}}
 
@@ -51,9 +51,9 @@ POST {{baseUrl}}/goto
 Content-Type: application/json
 
 {
-  "ra": 10.234,
-  "dec": -20.123,
-  "speed": 2
+  "ra": 1,
+  "dec": -30,
+  "speed": 3
 }
 # ra: hours (0–24), dec: degrees (-90–90), speed: 0–3
 
@@ -141,7 +141,7 @@ GET {{alpacaBase}}/connected?ClientID={{cid}}&ClientTransactionID={{txid}}
 PUT {{alpacaBase}}/connected?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-Connected=true
+Connected = true
 
 ### Description
 GET {{alpacaBase}}/description?ClientID={{cid}}&ClientTransactionID={{txid}}
@@ -342,31 +342,36 @@ PUT {{alpacaBase}}/setpark?ClientID={{cid}}&ClientTransactionID={{txid}}
 PUT {{alpacaBase}}/slewtocoordinatesasync?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-RightAscension=10.234&Declination=-20.123
+RightAscension = 10.234 &
+Declination = -20.123
 
 ### SlewToCoordinates (alias)
 PUT {{alpacaBase}}/slewtocoordinates?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-RightAscension=10.234&Declination=-20.123
+RightAscension = 10.234 &
+Declination = -20.123
 
 ### SlewToAltAzAsync
 PUT {{alpacaBase}}/slewtoaltazasync?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-Azimuth=180.0&Altitude=45.0
+Azimuth = 180.0 &
+Altitude = 45.0
 
 ### SyncToCoordinates
 PUT {{alpacaBase}}/synctocoordinates?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-RightAscension=10.234&Declination=-20.123
+RightAscension = 10.234 &
+Declination = -20.123
 
 ### SyncToAltAz
 PUT {{alpacaBase}}/synctoaltaz?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-Azimuth=180.0&Altitude=45.0
+Azimuth = 180.0 &
+Altitude = 45.0
 
 ### SlewToTargetAsync
 PUT {{alpacaBase}}/slewtotargetasync?ClientID={{cid}}&ClientTransactionID={{txid}}
@@ -381,13 +386,15 @@ PUT {{alpacaBase}}/synctotarget?ClientID={{cid}}&ClientTransactionID={{txid}}
 PUT {{alpacaBase}}/pulseguide?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-Direction=0&Duration=500
+Direction = 0 &
+Duration = 500
 
 ### MoveAxis
 PUT {{alpacaBase}}/moveaxis?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-Axis=0&Rate=4.0
+Axis = 0 &
+Rate = 4.0
 # Axis: 0=RA, 1=DEC; Rate: deg/s (positive/negative)
 
 # ═══════════════════════════════════════════════════════════════
@@ -398,87 +405,87 @@ Axis=0&Rate=4.0
 PUT {{alpacaBase}}/tracking?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-Tracking=true
+Tracking = true
 
 ### TrackingRate (PUT)
 PUT {{alpacaBase}}/trackingrate?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-TrackingRate=0
+TrackingRate = 0
 # 0=sidereal, 1=lunar, 2=solar
 
 ### UTCDate (PUT)
 PUT {{alpacaBase}}/utcdate?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-UTCDate=2026-06-05T20:15:00
+UTCDate = 2026-06-05T20:15:00
 
 ### SiteLatitude (PUT)
 PUT {{alpacaBase}}/sitelatitude?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-SiteLatitude=-32.8908
+SiteLatitude = -32.8908
 
 ### SiteLongitude (PUT)
 PUT {{alpacaBase}}/sitelongitude?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-SiteLongitude=-68.8272
+SiteLongitude = -68.8272
 
 ### SiteElevation (PUT)
 PUT {{alpacaBase}}/siteelevation?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-SiteElevation=750
+SiteElevation = 750
 
 ### TargetRightAscension (PUT)
 PUT {{alpacaBase}}/targetrightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-TargetRightAscension=10.234
+TargetRightAscension = 10.234
 
 ### TargetDeclination (PUT)
 PUT {{alpacaBase}}/targetdeclination?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-TargetDeclination=-20.123
+TargetDeclination = -20.123
 
 ### SideOfPier (PUT)
 PUT {{alpacaBase}}/sideofpier?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-SideOfPier=0
+SideOfPier = 0
 # 0=East, 1=West
 
 ### SlewSettleTime (PUT)
 PUT {{alpacaBase}}/slewsettletime?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-SlewSettleTime=5
+SlewSettleTime = 5
 
 ### DeclinationRate (PUT)
 PUT {{alpacaBase}}/declinationrate?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-DeclinationRate=0.0
+DeclinationRate = 0.0
 
 ### RightAscensionRate (PUT)
 PUT {{alpacaBase}}/rightascensionrate?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-RightAscensionRate=0.0
+RightAscensionRate = 0.0
 
 ### GuideRateDeclination (PUT)
 PUT {{alpacaBase}}/guideratedeclination?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-GuideRateDeclination=0.5
+GuideRateDeclination = 0.5
 
 ### GuideRateRightAscension (PUT)
 PUT {{alpacaBase}}/guideraterightascension?ClientID={{cid}}&ClientTransactionID={{txid}}
 Content-Type: application/x-www-form-urlencoded
 
-GuideRateRightAscension=0.5
+GuideRateRightAscension = 0.5
 
 ### ─── Alpaca response format ────────────────────────────────────
 # Every Alpaca response follows this structure:

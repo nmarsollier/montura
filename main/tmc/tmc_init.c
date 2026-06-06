@@ -72,11 +72,11 @@
 
 /*
  * Target microstep count to configure on both axes.
- * 256 microsteps per full step are used to obtain the maximum
+ * 128 microsteps per full step are used to obtain the maximum
  * resolution offered by the TMC2209 via UART.
  *
  * Hardware interpolation (intpol=1 in CHOPCONF) is also enabled,
- * meaning the driver internally generates 256 smooth microsteps
+ * meaning the driver internally generates 128 smooth microsteps
  * from each external STEP pulse, regardless of the actual MRES
  * value. This provides:
  *   - Ultra-smooth motion even at low tracking speeds
@@ -372,7 +372,7 @@ static esp_err_t tmc_set_microsteps(const TmcAxis *axis, uint16_t microsteps) {
     // Clear Bit 14 (en_spreadcycle = 0) -> Force ultra-quiet StealthChop mode
     updated &= ~(1U << 14);
 
-    // Set Bit 28 (intpol = 1) -> Enable hardware interpolation to 256 microsteps
+    // Set Bit 28 (intpol = 1) -> Enable hardware interpolation to TMC_TARGET_MICROSTEPS microsteps
     updated |= (1U << 28);
 
     // =========================================================================
@@ -408,7 +408,7 @@ static esp_err_t tmc_set_microsteps(const TmcAxis *axis, uint16_t microsteps) {
      */
     tmc2209_set_active_microsteps(verify_microsteps);
 
-    ESP_LOGI(TAG, "%s microsteps applied: %u (Hardware-interpolated to 256, cache=%u)",
+    ESP_LOGI(TAG, "%s microsteps applied: %u (TMC2209 intpol→256, cache=%u)",
              axis->name, verify_microsteps, tmc2209_get_active_microsteps());
     return ESP_OK;
 }

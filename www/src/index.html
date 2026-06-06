@@ -35,6 +35,36 @@
         </div>
     </div>
 
+    <!-- ═══ Site & Time ═══ -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <strong>Configuración</strong>
+        </div>
+
+        <!-- Time row -->
+        <div class="settings-row">
+            <span class="settings-label">Fecha y hora</span>
+            <span class="settings-value" x-text="mountTime">--</span>
+            <button @click="updateTime()">Actualizar hora</button>
+        </div>
+
+        <!-- Location row -->
+        <div class="settings-row">
+            <span class="settings-label">Ubicación</span>
+            <span class="settings-fields">
+                <input type="text" inputmode="decimal" placeholder="Lat"
+                       x-model.number="settings.lat" class="settings-input" title="Latitud">
+                <input type="text" inputmode="decimal" placeholder="Lon"
+                       x-model.number="settings.lon" class="settings-input" title="Longitud">
+                <input type="text" inputmode="numeric" placeholder="Elev"
+                       x-model.number="settings.elevation" class="settings-input settings-input-short"
+                       title="Elevación (m)">
+            </span>
+            <button @click="updateSettings()">Actualizar</button>
+        </div>
+    </div>
+
     <!-- ═══ Actions + Tracking ═══ -->
     <div class="grid">
         <div class="panel">
@@ -78,16 +108,17 @@
                 <div class="slew-field">
                     <label>Grados (1–90°)</label>
                     <div class="slew-field-row">
-                        <input type="number" min="1" max="90" x-model.number="degrees">
+                        <input type="text" inputmode="decimal" x-model.number="slew.degrees">
                     </div>
                 </div>
 
                 <div class="slew-field">
                     <label>Velocidad</label>
-                    <select x-model.number="speed">
-                        <template x-for="(s, i) in speedOptions" :key="i">
-                            <option :value="s" x-text="s + '×'"></option>
-                        </template>
+                    <select x-model.number="slew.speed">
+                        <option value="1">1×</option>
+                        <option value="2">2×</option>
+                        <option value="3">3×</option>
+                        <option value="4">4×</option>
                     </select>
                 </div>
             </div>
@@ -96,15 +127,65 @@
             <div class="slew-pad">
                 <div class="dir-grid">
                     <div></div>
-                    <button @click="slew('ra', 1)" title="RA +">▲</button>
+                    <button @click="doSlew('ra', 1)" title="RA +">▲</button>
                     <div></div>
-                    <button @click="slew('dec', -1)" title="DEC −">◀</button>
+                    <button @click="doSlew('dec', -1)" title="DEC −">◀</button>
                     <div class="center-cell">RA·DEC</div>
-                    <button @click="slew('dec', 1)" title="DEC +">▶</button>
+                    <button @click="doSlew('dec', 1)" title="DEC +">▶</button>
                     <div></div>
-                    <button @click="slew('ra', -1)" title="RA −">▼</button>
+                    <button @click="doSlew('ra', -1)" title="RA −">▼</button>
                     <div></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ GOTO ═══ -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <strong>GOTO</strong>
+        </div>
+
+        <div class="slew-layout">
+            <!-- Left: RA + DEC + Speed -->
+            <div class="slew-controls">
+                <div class="slew-field">
+                    <label>RA</label>
+                    <div class="coord-fields">
+                        <input type="text" inputmode="numeric" placeholder="HH" x-model.number="goto.ra.h">
+                        <span class="coord-sep">:</span>
+                        <input type="text" inputmode="numeric" placeholder="MM" x-model.number="goto.ra.m">
+                        <span class="coord-sep">:</span>
+                        <input type="text" inputmode="decimal" placeholder="SS" x-model.number="goto.ra.s">
+                    </div>
+                </div>
+
+                <div class="slew-field">
+                    <label>DEC</label>
+                    <div class="coord-fields">
+                        <input type="text" inputmode="decimal" placeholder="±DD" x-model.number="goto.dec.d">
+                        <span class="coord-sep">:</span>
+                        <input type="text" inputmode="numeric" placeholder="MM" x-model.number="goto.dec.m">
+                        <span class="coord-sep">:</span>
+                        <input type="text" inputmode="decimal" placeholder="SS" x-model.number="goto.dec.s">
+                    </div>
+                </div>
+
+                <div class="slew-field">
+                    <label>Velocidad</label>
+                    <select x-model.number="goto.speed">
+                        <option value="1">1×</option>
+                        <option value="2">2×</option>
+                        <option value="3">3×</option>
+                        <option value="4">4×</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Right: GOTO button (bottom-aligned) -->
+            <div class="goto-btn-col">
+                <button class="primary" @click="doGoto()">GOTO</button>
             </div>
         </div>
     </div>
@@ -119,12 +200,16 @@
             <input placeholder="SSID" x-model="wifi.ssid">
             <input placeholder="Password" x-model="wifi.password" type="password">
             <button class="primary"
-                    @click="fetch('/api/wifi-config', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ssid: wifi.ssid, password: wifi.password})}).then(() => fetchStatus())">
+                    @click="apiPost('/api/wifi-config', {ssid: wifi.ssid, password: wifi.password}).then(() => fetchStatus())">
                 Conectar
             </button>
         </div>
         <div class="wifi-warning">La red no está configurada. Conectar ahora para salir del modo AP.</div>
     </div>
+
+    <!-- ═══ Error banner ═══ -->
+    <div class="error-banner" x-show="errorMessage" x-text="errorMessage"
+         x-transition.opacity.duration.200ms></div>
 
     <!-- ═══ Footer ═══ -->
     <footer>Monturita · SPA embebida · REST <code>/api/*</code></footer>

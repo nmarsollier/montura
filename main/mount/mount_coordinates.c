@@ -37,8 +37,8 @@ static double gmst_hours_from_jd(double jd) {
 
 static float normalize_degf(float d) {
     d = fmodf(d, 360.0f);
-    if (d < 0.0f)
-        d += 360.0f;
+    if (d > 180.0f) d -= 360.0f;
+    if (d < -180.0f) d += 360.0f;
     return d;
 }
 
@@ -50,29 +50,82 @@ static float normalize_hoursf(float h) {
     return h;
 }
 
+/*
+ * --------------------------------------------------------------------------
+ * Equatorial ↔ Axis coordinate conversion.
+ *
+ * Geometry (German equatorial mount, southern hemisphere, home = SCP):
+ *
+ *   RA axis  = hour-angle-driven polar rotation.
+ *              Home (0°) = meridian.   +right / −left from home.
+ *              Physical limit: ±120° (tripod collision).
+ *
+ *   DEC axis = declination tilt relative to RA axis.
+ *              Home (0°) = SCP (DEC = −90°).
+ *              DEC = 0° (equator) = axis 90°.
+ *              DEC = +90° (NCP) = axis 180°.
+ *              Physical limit: ±180° (cable wrap).
+ *
+ * Pier side / meridian flip:
+ *
+ *   A GEM can reach the same sky position from two mechanical
+ *   configurations.  We always prefer the side that keeps RA within
+ *   its physical limits (±120°).
+ *
+ *   Normal side (no flip):
+ *     DEC_axis = DEC + 90°
+ *     RA_axis  = HA × 15          (HA = LST − RA, wrapped to [−12h, +12h])
+ *
+ *   Flipped side (pier flip, used when |RA_axis| > 120°):
+ *     DEC_axis = −(DEC + 90°)            (negate the normal DEC)
+ *     RA_axis  = RA_axis_normal ± 180°   (whichever stays within limits)
+ *
+ *   The flipped DEC is simply the negative of the normal DEC — the
+ *   telescope tube tilts the same amount but in the opposite direction
+ *   because the RA axis has rotated 180° to the other side of the pier.
+ * -------------------------------------------------------------------------- */
+
+#define RA_LIMIT_DEG 120.0f
+
 AxisCoordinates equatorial_to_axis(EquatorialCoordinates eq) {
     AxisCoordinates out;
 
-    /* Get current time in UTC and compute local sidereal time. */
+    /* Compute local sidereal time. */
     time_t now = time(NULL);
     double jd = unix_time_to_julian_date(now);
     double gmst_h = gmst_hours_from_jd(jd);
-
-    /* Longitude from settings, in degrees and positive east. */
     double lon = mount_internal_state.lon;
     double lst_h = gmst_h + (lon / 15.0);
-    lst_h = normalize_hoursf((float) lst_h);
 
-    /* Hour angle in hours = LST - RA. */
-    float ha_h = normalize_hoursf((float) (lst_h - eq.ra_hours));
-    float ha_deg = ha_h * 15.0f;
+    /* Hour angle = LST − RA.  Wrap to [−12h, +12h] so we pick the
+     * shortest path to the target.  Positive = west, negative = east. */
+    float ha_h = (float) (lst_h - eq.ra_hours);
+    while (ha_h > 12.0f)  ha_h -= 24.0f;
+    while (ha_h < -12.0f) ha_h += 24.0f;
 
-    /* Mechanical offsets to map axis-zero conventions. */
-    const float RA_AXIS_OFFSET_DEG = 180.0f; /* Zero points to the south pole. */
-    const float DEC_AXIS_OFFSET_DEG = 90.0f; /* Mechanical zero equals DEC -90. */
+    float ha_deg = ha_h * 15.0f;           /* [−180°, +180°] */
+    float ra_axis = ha_deg;                /* normal side */
 
-    out.ra_axis_deg = normalize_degf(ha_deg + RA_AXIS_OFFSET_DEG);
-    out.dec_axis_deg = normalize_degf(eq.dec_deg + DEC_AXIS_OFFSET_DEG);
+    /* Decide pier side based on RA physical limits. */
+    bool flipped = false;
+    if (ra_axis > RA_LIMIT_DEG) {
+        ra_axis -= 180.0f;
+        flipped = true;
+    } else if (ra_axis < -RA_LIMIT_DEG) {
+        ra_axis += 180.0f;
+        flipped = true;
+    }
+
+    out.ra_axis_deg = normalize_degf(ra_axis);
+
+    if (flipped) {
+        /* Flipped: DEC axis is the negative of the normal value.
+         * The RA axis rotated 180°, so the DEC tilt direction reverses. */
+        out.dec_axis_deg = normalize_degf(-(eq.dec_deg + 90.0f));
+    } else {
+        /* Normal:  DEC_axis = DEC_sky + 90° (SCP at 0°) */
+        out.dec_axis_deg = normalize_degf(eq.dec_deg + 90.0f);
+    }
 
     return out;
 }
@@ -80,25 +133,39 @@ AxisCoordinates equatorial_to_axis(EquatorialCoordinates eq) {
 EquatorialCoordinates axis_to_equatorial(AxisCoordinates axis) {
     EquatorialCoordinates out;
 
-    /* Inverse of the above mapping. */
-    const float RA_AXIS_OFFSET_DEG = 180.0f;
-    const float DEC_AXIS_OFFSET_DEG = 90.0f;
+    /* Determine pier side from the axis position.
+     *
+     * On the normal side    |RA_axis| ≤ 120° and DEC = DEC_axis − 90°.
+     * On the flipped side   the *un-flipped* RA would be > 120° in
+     * magnitude, so we detect the flip by checking both candidates. */
 
-    float ha_deg = normalize_degf(axis.ra_axis_deg - RA_AXIS_OFFSET_DEG);
+    float ra_norm = normalize_degf(axis.ra_axis_deg);        /* assume normal */
+    float ra_flip = normalize_degf(axis.ra_axis_deg > 0.0f
+                                       ? axis.ra_axis_deg - 180.0f
+                                       : axis.ra_axis_deg + 180.0f);
+
+    float ha_deg;
+    if (fabsf(ra_norm) <= RA_LIMIT_DEG) {
+        /* Normal side — RA axis directly encodes HA. */
+        ha_deg = ra_norm;
+        out.dec_deg = axis.dec_axis_deg - 90.0f;
+    } else {
+        /* Flipped side — reverse the flip.
+         * DEC_axis = −(DEC_sky + 90)  →  DEC_sky = −DEC_axis − 90 */
+        ha_deg = ra_flip;
+        out.dec_deg = -axis.dec_axis_deg - 90.0f;
+    }
+
     float ha_h = ha_deg / 15.0f;
 
-    /* Recompute LST from the current time and site settings. */
+    /* Recompute LST. */
     time_t now = time(NULL);
     double jd = unix_time_to_julian_date(now);
     double gmst_h = gmst_hours_from_jd(jd);
     double lon = mount_internal_state.lon;
     double lst_h = gmst_h + (lon / 15.0);
-    lst_h = normalize_hoursf((float) lst_h);
 
-    float ra_h = normalize_hoursf(lst_h - ha_h);
-    out.ra_hours = ra_h;
-
-    out.dec_deg = axis.dec_axis_deg - DEC_AXIS_OFFSET_DEG;
+    out.ra_hours = normalize_hoursf((float) (lst_h - ha_h));
 
     return out;
 }

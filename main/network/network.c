@@ -161,6 +161,15 @@ static void ip_event_handler(
 
     sprintf(network_ip, IPSTR, IP2STR(&event->ip_info.ip));
 
+    /* Sync system clock via SNTP on first successful connection. */
+    {
+        static bool sntp_started = false;
+        if (!sntp_started) {
+            sntp_started = true;
+            network_sntp_start();
+        }
+    }
+
     xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
 }
 

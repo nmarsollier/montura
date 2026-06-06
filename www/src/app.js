@@ -3,58 +3,124 @@ function mountApp() {
         status: {ra: '--:--:--', dec: '--:--:--'},
         statusText: 'UNKNOWN',
         settings: {lat: 0, lon: 0, elevation: 0},
-        speed: 1,
-        speedOptions: [1, 2, 3, 4],
-        degrees: 5,
+        mountTime: '--',
+        timeAutoSet: false,
+        errorMessage: '',
+        errorTimer: null,
+        slew: {degrees: 5, speed: 4},
         wifi: {ssid: '', password: ''},
-        // Current tracking mode reported by the device.
+        goto: {ra: {h: 0, m: 0, s: 0}, dec: {d: 0, m: 0, s: 0}, speed: 4},
         serverTracking: 'none',
         wifiAp: false,
-        // Selected tracking mode index for the control.
         selectedTracking: null,
         trackingOptions: ['none', 'sidereal', 'lunar', 'solar'],
+
+        /* Show an error message for 5 seconds, then auto-clear. */
+        showError(msg) {
+            this.errorMessage = msg;
+            if (this.errorTimer) clearTimeout(this.errorTimer);
+            this.errorTimer = setTimeout(() => { this.errorMessage = ''; }, 5000);
+        },
+
+        /* Helper: POST JSON, parse response, show errors automatically. */
+        apiPost(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            }).then(r => r.json()).then(j => {
+                if (!j.ok) this.showError(j.message || 'Error desconocido');
+                return j;
+            }).catch(e => {
+                this.showError('Red o servidor no disponible');
+                throw e;
+            });
+        },
 
         fetchStatus() {
             fetch('/api/status').then(r => r.json()).then(j => {
                 this.statusText = j.status || 'UNKNOWN';
                 this.status = {ra: j.ra || '--:--:--', dec: j.dec || '--:--:--'};
-                this.settings = j.settings || {lat: 0, lon: 0, elevation: 0};
+                this.mountTime = j.time || '--';
                 this.serverTracking = j.tracking || 'none';
                 this.wifiAp = j.wifi_ap || false;
-                // Initialize the select once so polling does not overwrite user input.
+
+                const s = j.settings;
+                if (s) {
+                    this.settings.lat = s.lat != null ? s.lat : 0;
+                    this.settings.lon = s.lon != null ? s.lon : 0;
+                    this.settings.elevation = s.elevation != null ? s.elevation : 0;
+                }
+
+                if (!this.timeAutoSet && j.time && j.time < '2000-01-01') {
+                    this.timeAutoSet = true;
+                    this.updateTime();
+                }
+
                 if (this.selectedTracking === null) {
                     const idx = this.trackingOptions.indexOf(j.tracking);
                     this.selectedTracking = idx >= 0 ? idx : 0;
                 }
-            }).catch(() => {
-            });
+            }).catch(() => {});
         },
 
-        stop() {
-            fetch('/api/stop', {method: 'POST'}).then(() => this.fetchStatus());
-        },
-        home() {
-            fetch('/api/home', {method: 'POST'}).then(() => this.fetchStatus());
-        },
-        park() {
-            fetch('/api/park', {method: 'POST'}).then(() => this.fetchStatus());
-        },
+        stop()  { this.apiPost('/api/stop').then(() => this.fetchStatus()); },
+        home()  { this.apiPost('/api/home').then(() => this.fetchStatus()); },
+        park()  { this.apiPost('/api/park').then(() => this.fetchStatus()); },
 
         setTracking() {
-            fetch('/api/tracking', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({tracking: this.trackingOptions[this.selectedTracking]})
+            this.apiPost('/api/tracking', {tracking: this.trackingOptions[this.selectedTracking]})
+                .then(() => this.fetchStatus());
+        },
+
+        doSlew(axis, dir) {
+            const axisName = axis === 'ra' ? 'ra' : 'dec';
+            const deg = Math.min(90, Math.max(1, Math.round(Math.abs(this.slew.degrees || 5))));
+            const spd = this.slew.speed || 4;
+            this.apiPost('/api/move-axis', {axis: axisName, degrees: dir * deg, speed: spd})
+                .then(() => this.fetchStatus());
+        },
+
+        doGoto() {
+            const rh = this.goto.ra.h;
+            const rm = this.goto.ra.m;
+            const rs = this.goto.ra.s;
+            const dd = this.goto.dec.d;
+            const dm = this.goto.dec.m;
+            const ds = this.goto.dec.s;
+
+            if (isNaN(rh) || rh < 0 || rh > 23 || isNaN(rm) || rm < 0 || rm > 59 || isNaN(rs) || rs < 0 || rs >= 60) {
+                this.showError('RA inválida — H: 0–23, M: 0–59, S: 0–59.999');
+                return;
+            }
+            if (isNaN(dd) || dd < -90 || dd > 90 || isNaN(dm) || dm < 0 || dm > 59 || isNaN(ds) || ds < 0 || ds >= 60) {
+                this.showError('DEC inválida — D: −90…+90, M: 0–59, S: 0–59.999');
+                return;
+            }
+
+            const raHours = rh + rm / 60 + rs / 3600;
+            const absDec = Math.abs(dd) + dm / 60 + ds / 3600;
+            const decDeg = dd < 0 ? -absDec : absDec;
+
+            this.apiPost('/api/goto', {ra: raHours, dec: decDeg, speed: this.goto.speed})
+                .then(() => this.fetchStatus());
+        },
+
+        updateTime() {
+            const now = new Date().toISOString();
+            this.apiPost('/api/settings', {
+                time: now,
+                lat: this.settings.lat || 0,
+                lon: this.settings.lon || 0,
+                elevation: this.settings.elevation || 0
             }).then(() => this.fetchStatus());
         },
 
-        slew(axis, dir) {
-            const axisName = axis === 'ra' ? 'ra' : 'dec';
-            const deg = Math.min(90, Math.max(1, Math.round(Math.abs(this.degrees))));
-            fetch('/api/move-axis', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({axis: axisName, degrees: dir * deg, speed: this.speed})
+        updateSettings() {
+            this.apiPost('/api/settings', {
+                lat: this.settings.lat || 0,
+                lon: this.settings.lon || 0,
+                elevation: this.settings.elevation || 0
             }).then(() => this.fetchStatus());
         },
 

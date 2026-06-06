@@ -335,6 +335,89 @@ button.primary:hover {
     letter-spacing: .6px;
 }
 
+/* ═══════════════════════════════════════════════════
+   Settings — time + location
+   ═══════════════════════════════════════════════════ */
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.settings-row:last-child {
+    margin-bottom: 0;
+}
+
+.settings-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    min-width: 80px;
+}
+
+.settings-value {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+}
+
+.settings-fields {
+    display: flex;
+    gap: 6px;
+}
+
+.settings-input {
+    width: 72px;
+}
+
+.settings-input-short {
+    width: 56px;
+}
+
+/* ═══════════════════════════════════════════════════
+   GOTO — 3-field coordinate inputs + bottom-aligned button
+   ═══════════════════════════════════════════════════ */
+
+/* Three-field H:M:S or D:M:S row */
+.coord-fields {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.coord-fields input {
+    width: 52px;
+    text-align: center;
+    padding: 8px 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.coord-sep {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 600;
+    user-select: none;
+}
+
+/* Right column: push GOTO button to the bottom */
+.goto-btn-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.goto-btn-col button {
+    min-width: 80px;
+    padding: 14px 24px;
+    font-size: 16px;
+}
+
 @media (max-width: 500px) {
     .slew-layout {
         grid-template-columns: 1fr;
@@ -370,10 +453,6 @@ select {
     cursor: pointer;
 }
 
-input[type="number"] {
-    width: 72px;
-}
-
 input::placeholder {
     color: #4a3a3a;
 }
@@ -394,6 +473,24 @@ input::placeholder {
 
 .wifi-warning::before {
     content: '⚠ ';
+}
+
+/* ═══════════════════════════════════════════════════
+   Error banner
+   ═══════════════════════════════════════════════════ */
+
+.error-banner {
+    margin: 0 auto 12px;
+    max-width: 880px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: #1a0a0a;
+    border: 1px solid var(--accent);
+    color: var(--text-accent);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    box-shadow: 0 0 20px var(--accent-glow);
 }
 
 /* ═══════════════════════════════════════════════════

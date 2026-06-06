@@ -6,6 +6,8 @@
 
 void network_start(void);
 
+void network_sntp_start(void);
+
 extern char network_ip[17];
 extern bool setup_ap_started;
 

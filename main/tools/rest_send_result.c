@@ -13,7 +13,7 @@
  */
 void rest_send_result(httpd_req_t *request, MountResult result) {
     static const char format[] = "{\"ok\":%s,\"message\":\"%s\"}";
-    char response[strlen(result.message) + sizeof(format)];
+    char response[strlen(result.message) + sizeof(format) + 1];
 
     snprintf(
         response,

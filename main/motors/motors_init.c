@@ -14,7 +14,9 @@ static const char *TAG = "MOTORS_INIT";
 /*
  * Default motors state.
  *
- * Positions are expressed in degrees and use the -180..180 range.
+ * Positions are expressed in degrees.
+ *   RA  -120..+120  (home = meridian; physical tripod collision risk beyond)
+ *   DEC -180..+180  (home = south celestial pole; cable wrap prevention)
  * The initial value is 0.0, which represents the home/alignment reference.
  */
 MotorsState motors_state = {
@@ -26,10 +28,10 @@ MotorsState motors_state = {
     .dec_velocity = 0.0f,
     .last_update = 0,
     .limits = {
-        .ra_min = -180.0f,
-        .ra_max = 180.0f,
-        .dec_min = -120.0f,
-        .dec_max = 120.0f,
+        .ra_min = -120.0f,
+        .ra_max = 120.0f,
+        .dec_min = -180.0f,
+        .dec_max = 180.0f,
     },
 };
 

@@ -19,7 +19,7 @@ void http_response_html(httpd_req_t *request, const char *html, unsigned int len
 
 void http_response_bad_request(httpd_req_t *request, const char *message) {
     static const char format[] = "{\"ok\":false,\"message\":\"%s\"}";
-    char response[strlen(message) + sizeof(format)];
+    char response[strlen(message) + sizeof(format) + 1];
 
     snprintf(
         response,

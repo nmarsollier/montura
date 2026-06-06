@@ -91,6 +91,7 @@ idf_component_register(
         "network/network_configure_home_wifi.c"
         "network/network_is_setup_ap_started.c"
         "network/network_ip.c"
+        "network/network_sntp.c"
 
         "rest_alpaca/rest_alpaca_server.c"
         "rest_alpaca/rest_alpaca_helpers.c"
