@@ -3,7 +3,7 @@
 #include <esp_http_server.h>
 
 /* ─── Alpaca server ─── */
-esp_err_t rest_alpaca_server_start(httpd_handle_t server);
+void rest_alpaca_server_start(void);
 
 /* ─── Common GET handlers ─── */
 esp_err_t alpaca_connected_handler(httpd_req_t *req);

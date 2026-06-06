@@ -1,11 +1,9 @@
 /* Runtime - runtime_http.c
  *
- * Purpose: start the shared HTTP server and delegate route registration
- * to the REST API and Alpaca modules.
+ * Purpose: bring up the REST and Alpaca HTTP servers, each on its own port.
  */
 #include "runtime.h"
 
-#include "esp_http_server.h"
 #include "esp_log.h"
 
 #include "rest.h"
@@ -16,23 +14,12 @@ static const char *TAG = "RUNTIME_HTTP";
 /*
  * Business use case: bring up the HTTP surface of the mount.
  *
- * Objective: create a single httpd instance and hand it to both the REST API
- * and Alpaca modules so they can register their routes on the same server.
+ * Objective: delegate to the REST (port 80) and Alpaca (port 11111)
+ * modules, each of which creates and owns its own httpd instance.
  */
 void runtime_http_start(void) {
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 128;
-    config.lru_purge_enable = true;
+    rest_server_start();
+    rest_alpaca_server_start();
 
-    esp_err_t result = httpd_start(&server, &config);
-    if (result != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start HTTP server: %s", esp_err_to_name(result));
-        return;
-    }
-
-    rest_server_start(server);
-    rest_alpaca_server_start(server);
-
-    ESP_LOGI(TAG, "HTTP server started");
+    ESP_LOGI(TAG, "HTTP servers started");
 }

@@ -134,7 +134,7 @@ void motors_sync_position(float ra_axis_deg, float dec_axis_deg);
 /*
  * Start continuous tracking according to the chosen `TrackingMode`.
  */
-MotorResultCode motors_start_tracking(TrackingMode mode);
+MotorResultCode motors_start_tracking(TrackingMode mode, float lat);
 
 /*
  * Move one or both axes continuously at the given rates in deg/s.

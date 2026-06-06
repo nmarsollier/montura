@@ -16,8 +16,11 @@
 
 static const char *TAG = "MOTORS_START_TRACKING";
 
-MotorResultCode motors_start_tracking(TrackingMode mode) {
+MotorResultCode motors_start_tracking(TrackingMode mode, float lat) {
     float ra_speed = motors_get_tracking_speed(mode);
+
+    /* Southern hemisphere: tracking direction is reversed. */
+    if (lat < 0.0f) ra_speed = -ra_speed;
 
     /* Pre-configure velocities for the task to pick up. */
     motors_set_axis_velocity_ra(ra_speed);

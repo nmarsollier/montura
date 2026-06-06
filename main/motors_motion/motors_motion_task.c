@@ -339,8 +339,14 @@ static void process_command(MotionCommand cmd) {
              * Tracking runs open-ended: target is set to the axis limit so
              * the loop never completes on its own — it only stops when an
              * external status change (STOP, PARK) is detected.
+             *
+             * Hemisphere selection: positive velocity → ra_max (northern),
+             * negative velocity → ra_min (southern).  The sign is set by
+             * motors_start_tracking based on site latitude.
              */
-            s_motion.ra_target = motors_state.limits.ra_max;
+            s_motion.ra_target = (cmd.ra_velocity >= 0.0f)
+                                     ? motors_state.limits.ra_max
+                                     : motors_state.limits.ra_min;
             s_motion.dec_target = motors_state.dec_position;
             s_motion.ra_start = motors_state.ra_position;
             s_motion.dec_start = motors_state.dec_position;

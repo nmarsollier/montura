@@ -3,7 +3,7 @@
 #include "esp_http_server.h"
 #include "mount.h"
 
-void rest_server_start(httpd_handle_t server);
+void rest_server_start(void);
 
 esp_err_t rest_status_handler(httpd_req_t * request);
 esp_err_t rest_screen_handler(httpd_req_t * request);

@@ -87,6 +87,8 @@ idf_component_register(
         "tools/string_utils.c"
         "tools/rest_tools.c"
 
+        "udp_alpaca/udp_alpaca.c"
+
         "network/network.c"
         "network/network_configure_home_wifi.c"
         "network/network_is_setup_ap_started.c"
@@ -194,6 +196,7 @@ idf_component_register(
         "buttons"
         "runtime"
         "tools"
+        "udp_alpaca"
         "network"
         "tmc"
 

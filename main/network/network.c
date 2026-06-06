@@ -241,6 +241,8 @@ void network_start(void) {
         pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
 
     if (bits & WIFI_CONNECTED_BIT) {
+        /* Disable modem sleep so UDP listeners don't drop packets. */
+        esp_wifi_set_ps(WIFI_PS_NONE);
         ESP_LOGI(TAG, "Home Wi-Fi ready");
         return;
     }

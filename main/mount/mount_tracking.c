@@ -18,7 +18,7 @@ static const char *TAG = "MOUNT_TRACKING";
  * apparent motion during observations while respecting state rules.
  */
 MountResult mount_set_tracking(TrackingMode tracking) {
-    MotorResultCode rc = motors_start_tracking(tracking);
+    MotorResultCode rc = motors_start_tracking(tracking, mount_internal_state.lat);
     if (rc != MOTOR_OK) {
         switch (rc) {
             case MOTOR_ERR_NOT_READY:

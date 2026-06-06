@@ -1,4 +1,4 @@
-/* rest_alpaca_server.c — Alpaca HTTP route registration on the shared server */
+/* rest_alpaca_server.c — Alpaca HTTP server on port 11111 */
 
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
@@ -13,7 +13,20 @@ static const char *TAG = "REST_ALPACA_SERVER";
 
 /* ─── Route registration ─── */
 
-esp_err_t rest_alpaca_server_start(httpd_handle_t server) {
+void rest_alpaca_server_start(void) {
+    httpd_handle_t server = NULL;
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.server_port        = 11111;
+    config.max_uri_handlers   = 128;
+    config.max_open_sockets   = 7;
+    config.lru_purge_enable   = true;
+    config.ctrl_port          = 32769;
+
+    esp_err_t result = httpd_start(&server, &config);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start Alpaca server: %s", esp_err_to_name(result));
+        return;
+    }
 
     /* ─── Management API ─── */
     rest_register_get(server, "/management/v1/apiversions",
@@ -121,6 +134,5 @@ esp_err_t rest_alpaca_server_start(httpd_handle_t server) {
     rest_register_put(server, T "/guideratedeclination", alpaca_guideratedec_put_handler);
     rest_register_put(server, T "/guideraterightascension", alpaca_guideratera_put_handler);
 
-    ESP_LOGI(TAG, "Alpaca routes registered on shared server");
-    return ESP_OK;
+    ESP_LOGI(TAG, "Alpaca server started on port 11111");
 }
