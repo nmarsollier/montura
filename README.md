@@ -2,7 +2,8 @@
 
 Mini montura ecuatorial DIY con ESP32, controlable vía NINA (Alpaca/ASCOM) y API REST propia.
 
-Este software es un firmware ESP-IDF para una mini montura ecuatorial de juguete compatible con flujo NINA (vía bridge Alpaca/ASCOM).
+Este software es un firmware ESP-IDF para una mini montura ecuatorial de juguete compatible con flujo NINA (vía bridge
+Alpaca/ASCOM).
 
 ## Arquitectura
 
@@ -68,14 +69,12 @@ Input polling (cada 50ms):
 
 - `STOP` (rising edge) -> `mount_stop()`
 
-
 ## REST API
 
 #### GET
 
 - `/` (raíz — sirve la UI embebida)
 - `/api/status`
-- `/api/screen` (alias de `/`, devuelve el mismo HTML embebido)
 
 #### POST
 
@@ -218,7 +217,7 @@ Sin body. Pasa a `ready` + `tracking=none` si estaba parked.
 La interfaz web es una SPA (Alpine.js) compilada a un único `dist/index.html` y embebida dentro del binario firmware
 usando el mecanismo nativo `EMBED_TXTFILES` de ESP-IDF. El linker expone el HTML como símbolos C
 (`_binary_index_html_start` / `_binary_index_html_end`) sin necesidad de archivos `.h` generados ni scripts Python.
-El HTML embebido se sirve en la raíz del servidor (`GET /`) y también está disponible vía `GET /api/screen` (alias),
+El HTML embebido se sirve en la raíz del servidor (`GET /`),
 de forma que la montura puede servir la interfaz incluso sin acceso a la red.
 
 - Mapeo de controles de la UI a la REST API:

@@ -11,5 +11,4 @@ bool buttons_hw_is_home_pressed(void);
 
 void buttons_hw_init(void);
 
-
 void buttons_init(void);

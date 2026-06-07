@@ -3,10 +3,8 @@
  * Purpose: poll button inputs and trigger the corresponding actions.
  */
 #include "buttons.h"
-#include "esp_log.h"
 
 #include "mount.h"
-#include "driver/gpio.h"
 
 typedef struct {
     bool last_stop_pressed;

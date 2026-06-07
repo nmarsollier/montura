@@ -19,10 +19,10 @@ static const char *TAG = "REST_API_SERVER";
 void rest_server_start(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers  = 16;
-    config.max_open_sockets  = 5;
-    config.lru_purge_enable  = true;
-    config.ctrl_port         = 32768;
+    config.max_uri_handlers = 16;
+    config.max_open_sockets = 5;
+    config.lru_purge_enable = true;
+    config.ctrl_port = 32768;
 
     esp_err_t result = httpd_start(&server, &config);
     if (result != ESP_OK) {

@@ -1,18 +1,10 @@
-/* Network - network.c
-*
- * Purpose: initialize Wi-Fi for the physical ESP32 board.
+/* Network - network_configure_home_wifi.c
  *
- * The device uses ESP-IDF Wi-Fi driver storage for home network credentials.
- * Monturita does not store a separate SSID/password in its own NVS namespace.
+ * Purpose: persist home Wi-Fi credentials via ESP-IDF Wi-Fi driver storage.
  *
- * Boot behavior:
- * - If the ESP-IDF Wi-Fi driver already has a station SSID, try to connect.
- * - If no station SSID exists, start the setup AP.
- * - If station connection fails, start the setup AP as fallback.
- *
- * Runtime behavior:
- * - REST can call network_configure_home_wifi() to set the station credentials.
- * - ESP-IDF persists those credentials internally.
+ * Called from the REST API when the user submits Wi-Fi configuration.
+ * ESP-IDF stores the credentials in its own NVS namespace so they survive
+ * reboot — Monturita does not keep a separate Wi-Fi config.
  */
 #include "network.h"
 

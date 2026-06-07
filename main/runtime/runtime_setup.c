@@ -12,7 +12,6 @@
 #include "motors.h"
 #include "mount.h"
 #include "network.h"
-#include "screen.h"
 
 static const char *TAG = "RUNTIME_SETUP";
 
@@ -40,7 +39,5 @@ void setup_init(void) {
 
     motors_init();
     
-    screen_init();
-
     ESP_LOGI(TAG, "Mount ready");
 }

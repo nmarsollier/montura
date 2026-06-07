@@ -8,7 +8,6 @@
 #include "freertos/task.h"
 
 #include "buttons.h"
-#include "screen.h"
 
 /*
  * Business use case: orchestrate the mount's periodic operational cycle.
@@ -27,7 +26,6 @@ static void main_loop_task(void *arg) {
 
     while (true) {
         if (elapsed_screen_ticks >= screen_period_ticks) {
-            screen_update();
             elapsed_screen_ticks = 0;
         }
 
@@ -58,5 +56,5 @@ void setup_runtime_start(void) {
         config->main_task_stack_size,
         (void *) config,
         config->main_task_priority,
-        NULL);
+        nullptr);
 }

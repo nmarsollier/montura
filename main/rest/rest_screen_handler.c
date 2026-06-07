@@ -3,11 +3,10 @@
  * Purpose: serve the embedded screen view.
  */
 #include "rest.h"
-#include "screen.h"
 #include "tools/tools.h"
 
 extern const char index_html_start[] asm("_binary_index_html_start");
-extern const char index_html_end[]   asm("_binary_index_html_end");
+extern const char index_html_end[] asm("_binary_index_html_end");
 
 /*
  * Business use case: expose the mounted UI as static HTML.
