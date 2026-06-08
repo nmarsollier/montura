@@ -7,10 +7,6 @@
 
 #include "motors.h"
 
-#include "esp_log.h"
-
-static const char *TAG = "MOUNT_SYNC";
-
 /*
  * Business use case: synchronize the mount's pointing model.
  *
@@ -33,9 +29,6 @@ MountResult mount_sync(float ra, float dec) {
     AxisCoordinates axis = equatorial_to_axis(requested);
 
     motors_sync_position(axis.ra_axis_deg, axis.dec_axis_deg);
-
-    ESP_LOGI(TAG, "SYNC applied RA=%.3f DEC=%.3f -> AXIS RAdeg=%.3f DECdeg=%.3f",
-             ra, dec, axis.ra_axis_deg, axis.dec_axis_deg);
 
     return mount_result_ok("SYNC applied");
 }

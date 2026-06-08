@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 #include <stdlib.h>
 
 /* Alpaca — Property — UTCDate (PUT)
@@ -17,7 +17,7 @@ esp_err_t alpaca_utcdate_put_handler(httpd_req_t *req) {
         alpaca_response_error(req, 1025, "Missing UTCDate", cid, stx);
         return ESP_OK;
     }
-    MountResult response = mount_alpaca_set_utc_date(val);
+    MountResult response = alpaca_bridge_set_utc_date(val);
     free(val);
     if (response.ok) alpaca_response_ok(req, cid, stx);
     else alpaca_response_error(req, 1025, response.message, cid, stx);

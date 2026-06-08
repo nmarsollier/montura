@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 
 /* Alpaca — Property — Tracking (PUT)
  *
@@ -13,7 +13,7 @@ esp_err_t alpaca_tracking_put_handler(httpd_req_t *req) {
     uint32_t stx = alpaca_next_server_tx();
     bool enabled = false;
     alpaca_get_form_bool(req, "Tracking", &enabled);
-    MountResult r = mount_alpaca_set_tracking(enabled);
+    MountResult r = alpaca_bridge_set_tracking(enabled);
     if (r.ok) alpaca_response_ok(req, cid, stx);
     else alpaca_response_error(req, 1025, r.message, cid, stx);
     return ESP_OK;

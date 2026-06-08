@@ -12,6 +12,8 @@ MountResult mount_result_ok(const char *message);
 MountResult mount_result_error(const char *message);
 
 /* NVS helpers used to persist mount settings. */
-void mount_settings_storage_load(MountSettings *out_settings);
+void mount_settings_load(MountSettings *out_settings);
 
-void mount_settings_storage_save(const MountSettings *settings);
+void mount_settings_save(const MountSettings *settings);
+
+MountResult motors_result_code_error_result(MotorResultCode rc);

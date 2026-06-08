@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 
 /* Alpaca — Property — TrackingRate (PUT)
  *
@@ -13,7 +13,7 @@ esp_err_t alpaca_trackingrate_put_handler(httpd_req_t *req) {
     uint32_t stx = alpaca_next_server_tx();
     int rate = 0;
     alpaca_get_form_int(req, "TrackingRate", &rate);
-    MountResult r = mount_alpaca_set_tracking_rate(rate);
+    MountResult r = alpaca_bridge_set_tracking_rate(rate);
     if (r.ok) alpaca_response_ok(req, cid, stx);
     else alpaca_response_error(req, 1025, r.message, cid, stx);
     return ESP_OK;

@@ -31,8 +31,8 @@ void http_response_bad_request(httpd_req_t *request, const char *message) {
     http_response_json(request, response);
 }
 
-HttpResponseBody http_response_read_body(httpd_req_t *request) {
-    HttpResponseBody body = {
+HttpRequestBody http_request_read_body(httpd_req_t *request) {
+    HttpRequestBody body = {
         .length = 0,
         .complete = false,
         .value = {0}

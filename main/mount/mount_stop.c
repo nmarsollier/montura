@@ -5,11 +5,7 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include "esp_log.h"
-
 #include "motors.h"
-
-static const char *TAG = "MOUNT_STOP";
 
 /*
  * Business use case: stop an active movement operation.
@@ -18,8 +14,6 @@ static const char *TAG = "MOUNT_STOP";
  */
 MountResult mount_stop(void) {
     motors_stop();
-
-    ESP_LOGI(TAG, "Motion stopped");
 
     return mount_result_ok("Motion stopped");
 }

@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 
 /* Alpaca — Property — TargetRightAscension (PUT)
  *
@@ -16,7 +16,7 @@ esp_err_t alpaca_targetra_put_handler(httpd_req_t *req) {
         alpaca_response_error(req, 1025, "Missing TargetRightAscension", cid, stx);
         return ESP_OK;
     }
-    mount_alpaca_set_target_ra(v);
+    alpaca_bridge_set_target_ra(v);
     alpaca_response_ok(req, cid, stx);
     return ESP_OK;
 }

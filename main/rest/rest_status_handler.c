@@ -15,7 +15,7 @@
  * and external automation.
  */
 esp_err_t rest_status_handler(httpd_req_t *request) {
-    VisibleStatusData data = mount_get_visible_status_data();
+    VisibleStatusData data = mount_get_visible_status();
 
     /* Format current mount time as ISO 8601 for the UI. */
     time_t now = time(NULL);

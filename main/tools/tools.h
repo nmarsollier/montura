@@ -1,8 +1,6 @@
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 #include "esp_http_server.h"
 
@@ -17,7 +15,7 @@ typedef struct {
     int length;
     bool complete;
     char value[HTTP_RESPONSE_BODY_MAX_LENGTH];
-} HttpResponseBody;
+} HttpRequestBody;
 
 void http_response_json(httpd_req_t *request, const char *json);
 
@@ -25,7 +23,7 @@ void http_response_html(httpd_req_t *request, const char *html, unsigned int len
 
 void http_response_bad_request(httpd_req_t *request, const char *message);
 
-HttpResponseBody http_response_read_body(httpd_req_t *request);
+HttpRequestBody http_request_read_body(httpd_req_t *request);
 
 /* JSON utilities. */
 #define JSON_STRING_RESULT_MAX_LENGTH 128
@@ -55,3 +53,12 @@ JsonIntResult json_get_int(const char *json, const char *key);
 uint32_t float_to_uint32(float value);
 
 float uint32_to_float(uint32_t value);
+
+void rest_register_get(httpd_handle_t server, const char *uri,
+                       esp_err_t (*handler)(httpd_req_t *));
+
+void rest_register_post(httpd_handle_t server, const char *uri,
+                        esp_err_t (*handler)(httpd_req_t *));
+
+void rest_register_put(httpd_handle_t server, const char *uri,
+                       esp_err_t (*handler)(httpd_req_t *));

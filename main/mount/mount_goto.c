@@ -5,11 +5,7 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include "esp_log.h"
-
 #include "motors.h"
-
-static const char *TAG = "MOUNT_GOTO";
 
 /*
  * Business use case: execute a GOTO to the requested coordinates.
@@ -27,9 +23,6 @@ MountResult mount_goto(float ra, float dec, int speed) {
     motors_enable();
 
     MotorResultCode rc1 = motors_slew_to_angle(axis.ra_axis_deg, axis.dec_axis_deg, speed);
-
-    ESP_LOGI(TAG, "GOTO started RA=%.3f DEC=%.3f -> AXIS RAdeg=%.3f DECdeg=%.3f speed=%d",
-             ra, dec, axis.ra_axis_deg, axis.dec_axis_deg, speed);
 
     if (rc1 != MOTOR_OK) {
         return mount_result_error("Failed to start GOTO");

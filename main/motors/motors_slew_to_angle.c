@@ -24,12 +24,12 @@ MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed) {
     }
     motors_set_axis_velocity_ra(actual_speed);
 
-    motors_state.status   = MOUNT_STATUS_SLEWING;
+    motors_state.status = MOUNT_STATUS_SLEWING;
     motors_state.tracking = TRACKING_NONE;
 
     motors_motion_slew(degrees, motors_state.dec_position,
-                               actual_speed, motors_state.dec_velocity);
-    ESP_LOGI(TAG, "Slew to angle RA: target=%.3f speed=%.6f", degrees, actual_speed);
+                       actual_speed, motors_state.dec_velocity);
+
     return MOTOR_OK;
 }
 
@@ -47,12 +47,12 @@ MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed) {
     }
     motors_set_axis_velocity_dec(actual_speed);
 
-    motors_state.status   = MOUNT_STATUS_SLEWING;
+    motors_state.status = MOUNT_STATUS_SLEWING;
     motors_state.tracking = TRACKING_NONE;
 
     motors_motion_slew(motors_state.ra_position, degrees,
-                               motors_state.ra_velocity, actual_speed);
-    ESP_LOGI(TAG, "Slew to angle DEC: target=%.3f speed=%.6f", degrees, actual_speed);
+                       motors_state.ra_velocity, actual_speed);
+
     return MOTOR_OK;
 }
 
@@ -77,11 +77,10 @@ MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed) {
     motors_set_axis_velocity_ra(actual_speed);
     motors_set_axis_velocity_dec(actual_speed);
 
-    motors_state.status   = MOUNT_STATUS_SLEWING;
+    motors_state.status = MOUNT_STATUS_SLEWING;
     motors_state.tracking = TRACKING_NONE;
 
     motors_motion_slew(ra_deg, dec_deg, actual_speed, actual_speed);
 
-    ESP_LOGI(TAG, "Slew to RA=%.3f DEC=%.3f (speed=%.6f)", ra_deg, dec_deg, actual_speed);
     return MOTOR_OK;
 }

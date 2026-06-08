@@ -18,7 +18,7 @@
  * store a separate Wi-Fi config in its own NVS namespace.
  */
 esp_err_t rest_wifi_handler(httpd_req_t *request) {
-    HttpResponseBody body = http_response_read_body(request);
+    HttpRequestBody body = http_request_read_body(request);
     JsonStringResult ssid = json_get_string(body.value, "ssid");
     JsonStringResult password = json_get_string(body.value, "password");
 

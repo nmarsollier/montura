@@ -18,11 +18,11 @@
  * observing strategy.
  */
 esp_err_t rest_tracking_handler(httpd_req_t *request) {
-    HttpResponseBody body = http_response_read_body(request);
+    HttpRequestBody body = http_request_read_body(request);
     JsonStringResult tracking_text = json_get_string(body.value, "tracking");
     TrackingMode tracking = tracking_from_string(tracking_text.value);
 
-    if (!tracking_text.ok || tracking == TRACKING_UNKNOWN) {
+    if (!tracking_text.ok) {
         static const char format[] = "Missing or invalid 'tracking'. Valid values: %s";
         const char *valid = tracking_valid_values();
 

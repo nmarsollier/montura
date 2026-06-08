@@ -15,14 +15,14 @@
  * -------------------------------------------------------------------------- */
 
 typedef enum {
-    MOTION_CMD_STOP = 0,      /* highest priority — preempts everything */
-    MOTION_CMD_PARK,          /* highest priority */
-    MOTION_CMD_DISABLE,       /* highest priority */
-    MOTION_CMD_TRACK,         /* high priority — preempts slewing */
-    MOTION_CMD_MOVE_AXIS,     /* normal priority — continuous single-axis motion */
-    MOTION_CMD_SLEW,          /* normal priority */
-    MOTION_CMD_ENABLE,        /* normal priority */
-    MOTION_CMD_SYNC,          /* low priority — just align targets */
+    MOTION_CMD_STOP = 0, /* highest priority — preempts everything */
+    MOTION_CMD_PARK, /* highest priority */
+    MOTION_CMD_DISABLE, /* highest priority */
+    MOTION_CMD_TRACK, /* high priority — preempts slewing */
+    MOTION_CMD_MOVE_AXIS, /* normal priority — continuous single-axis motion */
+    MOTION_CMD_SLEW, /* normal priority */
+    MOTION_CMD_ENABLE, /* normal priority */
+    MOTION_CMD_SYNC, /* low priority — just align targets */
 } MotionCommandType;
 
 typedef struct {

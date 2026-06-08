@@ -5,11 +5,7 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include "esp_log.h"
-
 #include "motors.h"
-
-static const char *TAG = "MOUNT_UNPARK";
 
 /*
  * Business use case: take the mount out of the parked state.
@@ -19,8 +15,6 @@ static const char *TAG = "MOUNT_UNPARK";
  */
 MountResult mount_unpark(void) {
     motors_enable();
-
-    ESP_LOGI(TAG, "Mount unparked");
 
     return mount_result_ok("Mount unparked");
 }

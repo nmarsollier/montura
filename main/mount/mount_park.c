@@ -5,11 +5,7 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include "esp_log.h"
-
 #include "motors.h"
-
-static const char *TAG = "MOUNT_PARK";
 
 /*
  * Business use case: park the mount.
@@ -22,8 +18,6 @@ MountResult mount_park(void) {
     }
 
     motors_park();
-
-    ESP_LOGI(TAG, "Mount parked");
 
     return mount_result_ok("Mount parked");
 }

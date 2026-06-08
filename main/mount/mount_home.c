@@ -5,11 +5,7 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include "esp_log.h"
-
 #include "motors.h"
-
-static const char *TAG = "MOUNT_HOME";
 
 /*
  * Business use case: send the mount to its home position.
@@ -22,8 +18,6 @@ MountResult mount_home(void) {
     }
 
     motors_home();
-
-    ESP_LOGI(TAG, "Mount homed");
 
     return mount_result_ok("Mount homed");
 }

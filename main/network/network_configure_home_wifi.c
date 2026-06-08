@@ -8,7 +8,6 @@
  */
 #include "network.h"
 
-#include <stdbool.h>
 #include <string.h>
 
 #include "esp_event.h"

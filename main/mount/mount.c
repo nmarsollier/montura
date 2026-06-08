@@ -20,5 +20,5 @@ MountSettings mount_internal_state;
  * operation and runtime scheduling.
  */
 void mount_init(void) {
-    mount_settings_storage_load(&mount_internal_state);
+    mount_settings_load(&mount_internal_state);
 }

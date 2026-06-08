@@ -4,8 +4,6 @@
  */
 #include "network.h"
 
-#include <stdbool.h>
-
 bool network_is_setup_ap_started(void) {
     return setup_ap_started;
 }

@@ -3,6 +3,15 @@
 #include "esp_http_server.h"
 #include "mount.h"
 
+/*
+ * Identifier for physical axes managed by the motors module.
+ */
+typedef enum {
+    MOTOR_AXIS_RA,
+    MOTOR_AXIS_DEC,
+    MOTOR_AXIS_UNKNOWN
+} MotorAxis;
+
 void rest_server_start(void);
 
 esp_err_t rest_status_handler(httpd_req_t *request);
@@ -32,3 +41,5 @@ esp_err_t rest_wifi_handler(httpd_req_t *request);
 void rest_send_result(
     httpd_req_t *request,
     MountResult result);
+
+MotorAxis motors_axis_from_string(const char *value);

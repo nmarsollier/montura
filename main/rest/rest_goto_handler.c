@@ -18,7 +18,7 @@
  * into a safe movement request.
  */
 esp_err_t rest_goto_handler(httpd_req_t *request) {
-    HttpResponseBody body = http_response_read_body(request);
+    HttpRequestBody body = http_request_read_body(request);
     JsonFloatResult ra = json_get_float(body.value, "ra");
     JsonFloatResult dec = json_get_float(body.value, "dec");
     JsonIntResult speed = json_get_int(body.value, "speed");

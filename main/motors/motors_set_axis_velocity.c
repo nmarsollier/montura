@@ -8,11 +8,7 @@
 #include "motors.h"
 
 #include "esp_log.h"
-#include "esp_timer.h"
 #include "motors_internal.h"
-#include "motors_motion.h"
-
-static const char *TAG = "MOTORS_SET_AXIS_VELOCITY";
 
 /*
  * Update the commanded velocity for a physical axis.
@@ -27,9 +23,6 @@ void motors_set_axis_velocity_ra(float degrees_per_second) {
     float motor_steps_per_axis_rev = motor_full_steps * (float) microsteps * motor_revs_per_axis_rev;
 
     motors_state.ra_steps_per_s = axis_rev_per_s * motor_steps_per_axis_rev;
-    motors_state.last_update = esp_timer_get_time();
-    ESP_LOGI(TAG, "Set axis RA velocity = %.6f deg/s -> %.1f steps/s (µsteps=%u)",
-             degrees_per_second, motors_state.ra_steps_per_s, microsteps);
 }
 
 void motors_set_axis_velocity_dec(float degrees_per_second) {
@@ -42,7 +35,4 @@ void motors_set_axis_velocity_dec(float degrees_per_second) {
     float motor_steps_per_axis_rev = motor_full_steps * (float) microsteps * motor_revs_per_axis_rev;
 
     motors_state.dec_steps_per_s = axis_rev_per_s * motor_steps_per_axis_rev;
-    motors_state.last_update = esp_timer_get_time();
-    ESP_LOGI(TAG, "Set axis DEC velocity = %.6f deg/s -> %.1f steps/s (µsteps=%u)",
-             degrees_per_second, motors_state.dec_steps_per_s, microsteps);
 }

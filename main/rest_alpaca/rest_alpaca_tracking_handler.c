@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 
 /* Alpaca — Property — Tracking (GET)
  *
@@ -12,7 +12,7 @@ esp_err_t alpaca_tracking_handler(httpd_req_t *req) {
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
 
-    bool response = mount_alpaca_get_tracking();
+    bool response = alpaca_bridge_get_tracking();
 
     alpaca_response_value(req, response ? "true" : "false", cid, stx);
     return ESP_OK;

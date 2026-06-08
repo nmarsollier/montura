@@ -6,12 +6,8 @@
 #include "motors_motion.h"
 #include "motors_motion_internal.h"
 
-#include "esp_log.h"
-
-static const char *TAG = "MOTORS_MOTION_SLEW";
-
 void motors_motion_slew(float ra_target, float dec_target,
-                         float ra_vel, float dec_vel) {
+                        float ra_vel, float dec_vel) {
     MotionCommand cmd = {
         .type = MOTION_CMD_SLEW,
         .ra_target_deg = ra_target,
@@ -21,6 +17,4 @@ void motors_motion_slew(float ra_target, float dec_target,
         .tracking_mode = TRACKING_NONE,
     };
     motors_motion_cmd_send(&cmd, false);
-    ESP_LOGI(TAG, "Queued SLEW: RA=%.4f DEC=%.4f vel_ra=%.4f vel_dec=%.4f",
-             ra_target, dec_target, ra_vel, dec_vel);
 }

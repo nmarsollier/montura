@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 
 /* Alpaca — Method — SyncToCoordinates
  *
@@ -20,7 +20,7 @@ esp_err_t alpaca_synctocoordinates_handler(httpd_req_t *req) {
         return ESP_OK;
     }
 
-    MountResult r = mount_alpaca_sync_to_coordinates(ra, dec);
+    MountResult r = alpaca_bridge_sync_to_coordinates(ra, dec);
     if (r.ok)
         alpaca_response_ok(req, cid, stx);
     else

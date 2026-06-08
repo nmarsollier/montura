@@ -16,9 +16,7 @@ typedef enum {
     /* Parked: mount in safe parked position. */
     MOUNT_STATUS_PARKED,
     /* Disabled: motors unavailable or disabled by user. */
-    MOUNT_STATUS_DISABLED,
-    /* Unknown: diagnostic state when status cannot be determined. */
-    MOUNT_STATUS_UNKNOWN
+    MOUNT_STATUS_DISABLED
 } MotorsStatus;
 
 /* NOTE: `MountStatus` alias removed - use `MotorsStatus` throughout the codebase. */
@@ -29,16 +27,12 @@ typedef enum {
 typedef enum TrackingMode {
     /* No automatic tracking. */
     TRACKING_NONE,
-    /* Manual mode - user controls velocities directly. */
-    TRACKING_MANUAL,
     /* Sidereal tracking (stars). */
     TRACKING_SIDEREAL,
     /* Lunar tracking (moon). */
     TRACKING_LUNAR,
     /* Solar tracking (sun). */
-    TRACKING_SOLAR,
-    /* Unknown/invalid tracking mode. */
-    TRACKING_UNKNOWN
+    TRACKING_SOLAR
 } TrackingMode;
 
 /*
@@ -60,8 +54,6 @@ typedef struct {
     /* Current commanded motor step rates derived from velocities (steps/s). */
     float ra_steps_per_s;
     float dec_steps_per_s;
-    /* Timestamp (microseconds) of the last update. */
-    int64_t last_update;
 
     /* Operational limits enforced by the motors module. */
     struct {
@@ -71,15 +63,6 @@ typedef struct {
         float dec_max;
     } limits;
 } MotorsState;
-
-/*
- * Identifier for physical axes managed by the motors module.
- */
-typedef enum {
-    MOTOR_AXIS_RA,
-    MOTOR_AXIS_DEC,
-    MOTOR_AXIS_UNKNOWN
-} MotorAxis;
 
 /* Numeric result codes returned by motors functions. Mount maps these to MountResult objects. */
 typedef enum {
@@ -142,7 +125,7 @@ MotorResultCode motors_start_tracking(TrackingMode mode, float lat);
  * Both zero is equivalent to STOP.  Used by Alpaca MoveAxis and
  * manual controls (buttons, joystick).
  */
-void motors_move_axis_velocity(float rate_ra, float rate_dec);
+void motors_set_move_axis_velocity(float rate_ra, float rate_dec);
 
 /*
  * Return the RA-axis angular velocity (deg/s) for a given `TrackingMode`.
@@ -153,11 +136,6 @@ float motors_get_tracking_speed(TrackingMode mode);
  * Return the module's default slewing speed (deg/s) for a requested profile.
  */
 float motors_get_slewing_speed(int speed);
-
-/* Utility helpers related to axes. */
-const char *motors_axis_to_string(MotorAxis axis);
-
-MotorAxis motors_axis_from_string(const char *value);
 
 const char *motors_axis_valid_values(void);
 

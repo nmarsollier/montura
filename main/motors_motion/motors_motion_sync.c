@@ -7,10 +7,6 @@
 #include "motors_motion.h"
 #include "motors_motion_internal.h"
 
-#include "esp_log.h"
-
-static const char *TAG = "MOTORS_MOTION_SYNC";
-
 void motors_motion_sync(float ra_axis_deg, float dec_axis_deg) {
     MotionCommand cmd = {
         .type = MOTION_CMD_SYNC,
@@ -19,5 +15,4 @@ void motors_motion_sync(float ra_axis_deg, float dec_axis_deg) {
         .tracking_mode = TRACKING_NONE,
     };
     motors_motion_cmd_send(&cmd, false);
-    ESP_LOGI(TAG, "Queued SYNC: RA=%.4f DEC=%.4f", ra_axis_deg, dec_axis_deg);
 }

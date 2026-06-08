@@ -4,12 +4,7 @@
  */
 #include "motors.h"
 
-#include "esp_log.h"
-#include "esp_timer.h"
-#include "motors_internal.h"
 #include "motors_motion.h"
-
-static const char *TAG = "MOTORS_INIT";
 
 /*
  * Default motors state.
@@ -26,7 +21,6 @@ MotorsState motors_state = {
     .tracking = TRACKING_NONE,
     .ra_velocity = 0.0f,
     .dec_velocity = 0.0f,
-    .last_update = 0,
     .limits = {
         .ra_min = -120.0f,
         .ra_max = 120.0f,
@@ -38,6 +32,4 @@ MotorsState motors_state = {
 void motors_init(void) {
     /* Keep this entry point for future hardware initialization. */
     motors_motion_init();
-    motors_state.last_update = esp_timer_get_time();
-    ESP_LOGI(TAG, "Motors initialized (RA=%.3f DEC=%.3f)", motors_state.ra_position, motors_state.dec_position);
 }

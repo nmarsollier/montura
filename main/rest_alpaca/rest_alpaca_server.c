@@ -2,7 +2,7 @@
 
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "rest_tools.h"
+#include "tools.h"
 
 #include <esp_http_server.h>
 #include <esp_log.h>
@@ -16,11 +16,11 @@ static const char *TAG = "REST_ALPACA_SERVER";
 void rest_alpaca_server_start(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.server_port        = 11111;
-    config.max_uri_handlers   = 128;
-    config.max_open_sockets   = 7;
-    config.lru_purge_enable   = true;
-    config.ctrl_port          = 32769;
+    config.server_port = 11111;
+    config.max_uri_handlers = 128;
+    config.max_open_sockets = 7;
+    config.lru_purge_enable = true;
+    config.ctrl_port = 32769;
 
     esp_err_t result = httpd_start(&server, &config);
     if (result != ESP_OK) {

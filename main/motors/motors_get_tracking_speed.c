@@ -4,15 +4,14 @@
  */
 #include "motors.h"
 
+#define SIDEREAL_RATE_DEG_PER_S (360.0f / 86164.0905308f)
+
 /*
  * Tracking profiles map to physical axis angular speeds in degrees per second.
  *
  * Mechanical gearing affects step rates, but the public API still works in
  * axis space.
  */
-
-#define SIDEREAL_RATE_DEG_PER_S (360.0f / 86164.0905308f)
-
 float motors_get_tracking_speed(TrackingMode mode) {
     switch (mode) {
         case TRACKING_SIDEREAL:
@@ -32,7 +31,6 @@ float motors_get_tracking_speed(TrackingMode mode) {
             return SIDEREAL_RATE_DEG_PER_S - moon_rate;
         }
 
-        case TRACKING_MANUAL:
         case TRACKING_NONE:
         default:
             return 0.0f;

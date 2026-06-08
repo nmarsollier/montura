@@ -11,10 +11,6 @@
 
 #include <math.h>
 
-#include "esp_log.h"
-
-static const char *TAG = "MOTORS_MOTION_MOVE_AXIS";
-
 void motors_motion_move_axis(float rate_ra, float rate_dec) {
     /*
      * When both rates are zero this is equivalent to STOP.
@@ -27,12 +23,11 @@ void motors_motion_move_axis(float rate_ra, float rate_dec) {
 
     MotionCommand cmd = {
         .type = MOTION_CMD_MOVE_AXIS,
-        .ra_target_deg = 0.0f,   /* set by the task from limits */
-        .dec_target_deg = 0.0f,  /* set by the task */
+        .ra_target_deg = 0.0f, /* set by the task from limits */
+        .dec_target_deg = 0.0f, /* set by the task */
         .ra_velocity = rate_ra,
         .dec_velocity = rate_dec,
-        .tracking_mode = TRACKING_MANUAL,
+        .tracking_mode = TRACKING_NONE,
     };
     motors_motion_cmd_send(&cmd, false);
-    ESP_LOGI(TAG, "Queued MOVE_AXIS: RA=%.6f DEC=%.6f deg/s", rate_ra, rate_dec);
 }

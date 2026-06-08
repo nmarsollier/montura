@@ -38,15 +38,11 @@
 #include "motors_internal.h"
 
 #include <math.h>
-#include <stdbool.h>
 
-#include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-
-static const char *TAG = "MOTORS_MOTION_TASK";
 
 /* Stack size for the motion task (words). */
 #define MOTION_TASK_STACK_WORDS 2048
@@ -233,7 +229,6 @@ static bool step_axis_ra(float target_deg, float deg_per_step) {
         return false;
 
     if (!motors_is_valid_ra(next_position)) {
-        ESP_LOGW(TAG, "RA limit reached at %.4f", next_position);
         return false;
     }
 
@@ -252,7 +247,6 @@ static bool step_axis_dec(float target_deg, float deg_per_step) {
         return false;
 
     if (!motors_is_valid_dec(next_position)) {
-        ESP_LOGW(TAG, "DEC limit reached at %.4f", next_position);
         return false;
     }
 
@@ -277,24 +271,17 @@ static bool check_motion_conditions(float deg_per_step) {
         !ra_has_target && !dec_has_target) {
         motors_state.status = MOUNT_STATUS_READY;
         motors_state.tracking = TRACKING_NONE;
-        motors_state.last_update = esp_timer_get_time();
         s_motion.motion_active = false;
 
-        ESP_LOGI(TAG, "Slew complete: RA=%.4f DEC=%.4f",
-                 motors_state.ra_position, motors_state.dec_position);
         return false;
     }
 
     /* External tracking stop. */
-    if ((motors_state.tracking == TRACKING_NONE ||
-         motors_state.tracking == TRACKING_MANUAL) &&
+    if (motors_state.tracking == TRACKING_NONE &&
         motors_state.status == MOUNT_STATUS_TRACKING) {
         motors_state.status = MOUNT_STATUS_READY;
-        motors_state.last_update = esp_timer_get_time();
         s_motion.motion_active = false;
 
-        ESP_LOGI(TAG, "Tracking stopped: RA=%.4f DEC=%.4f",
-                 motors_state.ra_position, motors_state.dec_position);
         return false;
     }
 
@@ -323,10 +310,6 @@ static void process_command(MotionCommand cmd) {
             s_motion.dec_start = motors_state.dec_position;
             s_motion.motion_active = true;
 
-            ESP_LOGI(TAG, "SLEW started: RA %.4f->%.4f DEC %.4f->%.4f vel=%.4f/%.4f",
-                     motors_state.ra_position, cmd.ra_target_deg,
-                     motors_state.dec_position, cmd.dec_target_deg,
-                     cmd.ra_velocity, cmd.dec_velocity);
             break;
 
         case MOTION_CMD_TRACK:
@@ -352,15 +335,13 @@ static void process_command(MotionCommand cmd) {
             s_motion.dec_start = motors_state.dec_position;
             s_motion.motion_active = true;
 
-            ESP_LOGI(TAG, "TRACK started: mode=%s ra_vel=%.6f",
-                     tracking_to_string(cmd.tracking_mode), cmd.ra_velocity);
             break;
 
         case MOTION_CMD_MOVE_AXIS:
             motors_set_axis_velocity_ra(fabsf(cmd.ra_velocity));
             motors_set_axis_velocity_dec(fabsf(cmd.dec_velocity));
             motors_state.status = MOUNT_STATUS_SLEWING;
-            motors_state.tracking = TRACKING_MANUAL;
+            motors_state.tracking = TRACKING_NONE;
 
             /*
              * Continuous motion: each moving axis targets its limit in the
@@ -377,33 +358,25 @@ static void process_command(MotionCommand cmd) {
             s_motion.dec_start = motors_state.dec_position;
             s_motion.motion_active = true;
 
-            ESP_LOGI(TAG, "MOVE_AXIS started: RA=%.6f DEC=%.6f deg/s",
-                     cmd.ra_velocity, cmd.dec_velocity);
             break;
 
         case MOTION_CMD_STOP:
             s_motion.motion_active = false;
             motors_state.status = MOUNT_STATUS_READY;
             motors_state.tracking = TRACKING_NONE;
-            motors_state.last_update = esp_timer_get_time();
-            ESP_LOGI(TAG, "STOP processed");
             break;
 
         case MOTION_CMD_PARK:
             s_motion.motion_active = false;
             motors_state.status = MOUNT_STATUS_PARKED;
             motors_state.tracking = TRACKING_NONE;
-            motors_state.last_update = esp_timer_get_time();
-            ESP_LOGI(TAG, "PARK processed");
             break;
 
         case MOTION_CMD_DISABLE:
             s_motion.motion_active = false;
             motors_motion_hw_disable();
             motors_state.status = MOUNT_STATUS_DISABLED;
-            motors_state.tracking = TRACKING_MANUAL;
-            motors_state.last_update = esp_timer_get_time();
-            ESP_LOGI(TAG, "DISABLE processed");
+            motors_state.tracking = TRACKING_NONE;
             break;
 
         case MOTION_CMD_ENABLE:
@@ -411,15 +384,12 @@ static void process_command(MotionCommand cmd) {
             motors_motion_hw_enable();
             motors_state.status = MOUNT_STATUS_READY;
             motors_state.tracking = TRACKING_NONE;
-            motors_state.last_update = esp_timer_get_time();
-            ESP_LOGI(TAG, "ENABLE processed");
             break;
 
         case MOTION_CMD_SYNC:
             s_motion.motion_active = false;
             motors_state.ra_position = cmd.ra_target_deg;
             motors_state.dec_position = cmd.dec_target_deg;
-            motors_state.last_update = esp_timer_get_time();
 
             /*
              * Also align the active motion targets so a future start
@@ -430,8 +400,6 @@ static void process_command(MotionCommand cmd) {
             s_motion.ra_start = cmd.ra_target_deg;
             s_motion.dec_start = cmd.dec_target_deg;
 
-            ESP_LOGI(TAG, "SYNC processed: RA=%.4f DEC=%.4f",
-                     cmd.ra_target_deg, cmd.dec_target_deg);
             break;
     }
 }
@@ -501,8 +469,6 @@ static void slewing_loop(void) {
                 int current_prio = motion_cmd_priority(s_motion.active_cmd_type);
 
                 if (incoming_prio < current_prio) {
-                    ESP_LOGI(TAG, "Preempting cmd %d with higher-priority cmd %d",
-                             s_motion.active_cmd_type, cmd.type);
                     process_command(cmd);
                     if (!s_motion.motion_active) return;
                     next_ra_us = esp_timer_get_time();
@@ -549,8 +515,6 @@ static void slewing_loop(void) {
             if (next_dec_us <= now) next_dec_us = now + dec_period;
         }
 
-        motors_state.last_update = now;
-
         /* 5. Smart wait — single strategy selection per iteration. */
         int64_t next_step = (next_ra_us < next_dec_us) ? next_ra_us : next_dec_us;
         int64_t wait_us = next_step - esp_timer_get_time();
@@ -585,8 +549,6 @@ static void slewing_loop(void) {
                     if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
                         if (motion_cmd_priority(preempt_cmd.type) <
                             motion_cmd_priority(s_motion.active_cmd_type)) {
-                            ESP_LOGI(TAG, "Preempting cmd %d with higher-priority cmd %d (slow path)",
-                                     s_motion.active_cmd_type, preempt_cmd.type);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
                             next_ra_us = esp_timer_get_time();
@@ -608,8 +570,6 @@ static void slewing_loop(void) {
                     if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
                         if (motion_cmd_priority(preempt_cmd.type) <
                             motion_cmd_priority(s_motion.active_cmd_type)) {
-                            ESP_LOGI(TAG, "Preempting cmd %d with higher-priority cmd %d (fast path)",
-                                     s_motion.active_cmd_type, preempt_cmd.type);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
                             next_ra_us = esp_timer_get_time();
@@ -691,7 +651,6 @@ static void tracking_loop(void) {
                 int current_prio = motion_cmd_priority(s_motion.active_cmd_type);
 
                 if (incoming_prio < current_prio) {
-                    ESP_LOGI(TAG, "Preempting tracking with cmd %d", cmd.type);
                     process_command(cmd);
                     if (!s_motion.motion_active) return;
 
@@ -717,14 +676,10 @@ static void tracking_loop(void) {
                 s_motion.motion_active = false;
                 motors_state.status = MOUNT_STATUS_READY;
                 motors_state.tracking = TRACKING_NONE;
-                ESP_LOGW(TAG, "Tracking halted: RA limit reached at %.4f",
-                         motors_state.ra_position);
                 return;
             }
             accumulator -= 1.0;
         }
-
-        motors_state.last_update = now;
 
         /* ------------------------------------------------------------------
          * Hybrid sleep + fine-wait.
@@ -774,8 +729,6 @@ static void tracking_loop(void) {
                 if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
                     if (motion_cmd_priority(preempt_cmd.type) <
                         motion_cmd_priority(s_motion.active_cmd_type)) {
-                        ESP_LOGI(TAG, "Preempting tracking with cmd %d (fine-wait)",
-                                 preempt_cmd.type);
                         process_command(preempt_cmd);
                         if (!s_motion.motion_active) return;
 
@@ -803,8 +756,7 @@ static void tracking_loop(void) {
  *     (incremental scheduling with ramps)
  * -------------------------------------------------------------------------- */
 static void motion_loop(void) {
-    if (motors_state.status == MOUNT_STATUS_TRACKING &&
-        motors_state.tracking != TRACKING_MANUAL) {
+    if (motors_state.status == MOUNT_STATUS_TRACKING && motors_state.tracking != TRACKING_NONE) {
         tracking_loop();
     } else {
         slewing_loop();
@@ -854,6 +806,4 @@ void motors_motion_init(void) {
         &s_motion_task_handle);
 
     motors_motion_hw_init();
-
-    ESP_LOGI(TAG, "Motion task created");
 }

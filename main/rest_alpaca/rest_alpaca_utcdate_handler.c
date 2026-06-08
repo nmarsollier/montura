@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 #include <stdio.h>
 
 /* Alpaca — Property — UTCDate (GET)
@@ -13,7 +13,7 @@ esp_err_t alpaca_utcdate_handler(httpd_req_t *req) {
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
 
-    const char *response = mount_alpaca_get_utc_date();
+    const char *response = alpaca_bridge_get_utc_date();
 
     char buf[64];
     snprintf(buf, sizeof(buf), "\"%s\"", response);

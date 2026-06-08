@@ -93,3 +93,4 @@ bool alpaca_get_form_int(httpd_req_t *req, const char *key, int *out);
  * Get the next server transaction ID (monotonically increasing).
  */
 uint32_t alpaca_next_server_tx(void);
+

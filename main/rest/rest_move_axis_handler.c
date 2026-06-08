@@ -14,7 +14,7 @@
  * external clients and turn them into a validated relative move request.
  */
 esp_err_t rest_move_axis_handler(httpd_req_t *request) {
-    HttpResponseBody body = http_response_read_body(request);
+    HttpRequestBody body = http_request_read_body(request);
     JsonStringResult axis_str = json_get_string(body.value, "axis");
     JsonFloatResult degrees = json_get_float(body.value, "degrees");
     JsonIntResult speed = json_get_int(body.value, "speed");
@@ -60,7 +60,11 @@ esp_err_t rest_move_axis_handler(httpd_req_t *request) {
         speed_value = speed.value;
     }
 
-    rest_send_result(request, mount_move_axis(axis, degrees.value, speed_value));
+    if (axis == MOTOR_AXIS_RA) {
+        rest_send_result(request, mount_move_axis_ra(degrees.value, speed_value));
+    } else {
+        rest_send_result(request, mount_move_axis_dec(degrees.value, speed_value));
+    }
 
     return ESP_OK;
 }

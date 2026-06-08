@@ -4,7 +4,6 @@
  */
 #include "rest.h"
 
-#include <stdio.h>
 #include <string.h>
 
 #include "mount.h"
@@ -18,7 +17,7 @@
  * them across restarts.
  */
 esp_err_t rest_settings_handler(httpd_req_t *request) {
-    HttpResponseBody body = http_response_read_body(request);
+    HttpRequestBody body = http_request_read_body(request);
     MountSettings settings = {0};
     JsonStringResult time = json_get_string(body.value, "time");
     JsonFloatResult lat = json_get_float(body.value, "lat");
@@ -56,7 +55,7 @@ esp_err_t rest_settings_handler(httpd_req_t *request) {
     settings.lon = lon.value;
     settings.elevation = elevation.value;
 
-    rest_send_result(request, mount_update_settings(settings));
+    rest_send_result(request, mount_settings_update(settings));
 
     return ESP_OK;
 }

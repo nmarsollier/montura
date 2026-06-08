@@ -5,11 +5,7 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include "esp_log.h"
-
 #include "motors.h"
-
-static const char *TAG = "MOUNT_TRACKING";
 
 /*
  * Business use case: change the mount's active tracking mode.
@@ -27,8 +23,6 @@ MountResult mount_set_tracking(TrackingMode tracking) {
                 return mount_result_error("Motor error");
         }
     }
-
-    ESP_LOGI(TAG, "Tracking changed to %s", tracking_to_string(tracking));
 
     return mount_result_ok("Tracking changed");
 }

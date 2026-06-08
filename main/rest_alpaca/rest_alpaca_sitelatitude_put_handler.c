@@ -1,6 +1,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
-#include "mount.h"
+#include "alpaca_bridge.h"
 
 /* Alpaca — Property — SiteLatitude (PUT)
  *
@@ -16,7 +16,7 @@ esp_err_t alpaca_sitelatitude_put_handler(httpd_req_t *req) {
         alpaca_response_error(req, 1025, "Missing SiteLatitude", cid, stx);
         return ESP_OK;
     }
-    MountResult r = mount_alpaca_set_site_latitude(v);
+    MountResult r = alpaca_bridge_set_site_latitude(v);
     if (r.ok) alpaca_response_ok(req, cid, stx);
     else alpaca_response_error(req, 1025, r.message, cid, stx);
     return ESP_OK;
