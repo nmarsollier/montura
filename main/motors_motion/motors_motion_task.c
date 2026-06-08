@@ -39,13 +39,18 @@
 
 #include <math.h>
 
+#include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
-/* Stack size for the motion task (words). */
-#define MOTION_TASK_STACK_WORDS 2048
+/* Stack size for the motion task (words).  Bumped from 2048 to 4096
+ * after observing a stray _invalid_pc_placeholder crash — a stack
+ * overflow in the motion task would produce exactly that symptom
+ * (the slewing_loop has deep call chains through step + condition
+ * helpers and FreeRTOS queue operations). */
+#define MOTION_TASK_STACK_WORDS 4096
 #define MOTION_TASK_PRIORITY    5
 
 /* Step period upper bound (us) used when velocity is zero or unknown. */
@@ -304,8 +309,13 @@ static void process_command(MotionCommand cmd) {
             motors_state.status = MOUNT_STATUS_SLEWING;
             motors_state.tracking = TRACKING_NONE;
 
-            s_motion.ra_target = cmd.ra_target_deg;
-            s_motion.dec_target = cmd.dec_target_deg;
+            if (cmd.relative) {
+                s_motion.ra_target = motors_state.ra_position + cmd.ra_delta_deg;
+                s_motion.dec_target = motors_state.dec_position + cmd.dec_delta_deg;
+            } else {
+                s_motion.ra_target = cmd.ra_target_deg;
+                s_motion.dec_target = cmd.dec_target_deg;
+            }
             s_motion.ra_start = motors_state.ra_position;
             s_motion.dec_start = motors_state.dec_position;
             s_motion.motion_active = true;
@@ -464,11 +474,17 @@ static void slewing_loop(void) {
             last_check_us = now;
 
             MotionCommand cmd;
-            if (xQueueReceive(motion_cmd_queue, &cmd, 0) == pdTRUE) {
+            /*
+             * Peek (don't consume) so commands that don't preempt stay
+             * in the queue for the next motion.  Only xQueueReceive
+             * when we're actually going to process the command.
+             */
+            if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
                 int incoming_prio = motion_cmd_priority(cmd.type);
                 int current_prio = motion_cmd_priority(s_motion.active_cmd_type);
 
                 if (incoming_prio < current_prio) {
+                    xQueueReceive(motion_cmd_queue, &cmd, 0);
                     process_command(cmd);
                     if (!s_motion.motion_active) return;
                     next_ra_us = esp_timer_get_time();
@@ -546,9 +562,10 @@ static void slewing_loop(void) {
             while (esp_timer_get_time() < next_step) {
                 if ((esp_timer_get_time() & 0x1FF) == 0) {
                     MotionCommand preempt_cmd;
-                    if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
+                    if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
                         if (motion_cmd_priority(preempt_cmd.type) <
                             motion_cmd_priority(s_motion.active_cmd_type)) {
+                            xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
                             next_ra_us = esp_timer_get_time();
@@ -557,6 +574,7 @@ static void slewing_loop(void) {
                             break; /* exit fine-wait, re-enter outer loop */
                         }
                     }
+                    taskYIELD();  /* reset task WDT, let other tasks run */
                 }
             }
         } else if (wait_us > 100) {
@@ -567,9 +585,10 @@ static void slewing_loop(void) {
             while (esp_timer_get_time() < next_step) {
                 if ((esp_timer_get_time() & 0x1FF) == 0) {
                     MotionCommand preempt_cmd;
-                    if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
+                    if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
                         if (motion_cmd_priority(preempt_cmd.type) <
                             motion_cmd_priority(s_motion.active_cmd_type)) {
+                            xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
                             next_ra_us = esp_timer_get_time();
@@ -646,11 +665,12 @@ static void tracking_loop(void) {
             last_check_us = now;
 
             MotionCommand cmd;
-            if (xQueueReceive(motion_cmd_queue, &cmd, 0) == pdTRUE) {
+            if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
                 int incoming_prio = motion_cmd_priority(cmd.type);
                 int current_prio = motion_cmd_priority(s_motion.active_cmd_type);
 
                 if (incoming_prio < current_prio) {
+                    xQueueReceive(motion_cmd_queue, &cmd, 0);
                     process_command(cmd);
                     if (!s_motion.motion_active) return;
 
@@ -665,6 +685,16 @@ static void tracking_loop(void) {
             }
 
             if (!check_motion_conditions(deg_per_step)) break;
+
+            /*
+             * If a preempting command (e.g. SLEW) changed the status
+             * from TRACKING to something else, exit so motion_loop()
+             * redispatches to the correct loop (slewing_loop).
+             */
+            if (motors_state.status != MOUNT_STATUS_TRACKING ||
+                motors_state.tracking == TRACKING_NONE) {
+                break;
+            }
         }
 
         /* ------------------------------------------------------------------
@@ -726,9 +756,10 @@ static void tracking_loop(void) {
         while (esp_timer_get_time() < deadline) {
             if ((esp_timer_get_time() & 0x1FF) == 0) {
                 MotionCommand preempt_cmd;
-                if (xQueueReceive(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
+                if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
                     if (motion_cmd_priority(preempt_cmd.type) <
                         motion_cmd_priority(s_motion.active_cmd_type)) {
+                        xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                         process_command(preempt_cmd);
                         if (!s_motion.motion_active) return;
 
@@ -741,6 +772,7 @@ static void tracking_loop(void) {
                         break; /* exit fine-wait, re-enter outer loop */
                     }
                 }
+                taskYIELD();  /* reset task WDT, let other tasks run */
             }
         }
     }
@@ -806,4 +838,11 @@ void motors_motion_init(void) {
         &s_motion_task_handle);
 
     motors_motion_hw_init();
+
+    /* Report stack high-water mark for diagnostics. */
+    if (s_motion_task_handle != NULL) {
+        UBaseType_t high_water = uxTaskGetStackHighWaterMark(s_motion_task_handle);
+        ESP_LOGI("MOTORS_MOTION_TASK", "Stack high-water mark: %lu words (total %d)",
+                 (unsigned long) high_water, MOTION_TASK_STACK_WORDS);
+    }
 }

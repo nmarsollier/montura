@@ -9,6 +9,7 @@
  * Alpaca usage: N.I.N.A. allows the user to select the tracking rate for solar/lunar.
  */
 esp_err_t alpaca_trackingrate_put_handler(httpd_req_t *req) {
+    alpaca_read_body(req);
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     int rate = 0;

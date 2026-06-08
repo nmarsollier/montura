@@ -9,6 +9,7 @@
  * Alpaca usage: N.I.N.A. may update this after performing a meridian flip.
  */
 esp_err_t alpaca_sideofpier_put_handler(httpd_req_t *req) {
+    alpaca_read_body(req);
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     int v;

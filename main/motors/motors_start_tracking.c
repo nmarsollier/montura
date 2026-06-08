@@ -13,6 +13,12 @@
 #include "motors_internal.h"
 
 MotorResultCode motors_start_tracking(TrackingMode mode, float lat) {
+    /* TRACKING_NONE means "stop tracking" — just send STOP. */
+    if (mode == TRACKING_NONE) {
+        motors_stop();
+        return MOTOR_OK;
+    }
+
     float ra_speed = motors_get_tracking_speed(mode);
 
     /* Southern hemisphere: tracking direction is reversed. */

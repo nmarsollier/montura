@@ -64,9 +64,10 @@ function mountApp() {
             }).catch(() => {});
         },
 
-        stop()  { this.apiPost('/api/stop').then(() => this.fetchStatus()); },
-        home()  { this.apiPost('/api/home').then(() => this.fetchStatus()); },
-        park()  { this.apiPost('/api/park').then(() => this.fetchStatus()); },
+        stop()   { this.apiPost('/api/stop').then(() => this.fetchStatus()); },
+        home()   { this.apiPost('/api/home').then(() => this.fetchStatus()); },
+        park()   { this.apiPost('/api/park').then(() => this.fetchStatus()); },
+        unpark() { this.apiPost('/api/unpark').then(() => this.fetchStatus()); },
 
         setTracking() {
             this.apiPost('/api/tracking', {tracking: this.trackingOptions[this.selectedTracking]})
@@ -130,10 +131,3 @@ function mountApp() {
         }
     }
 }
-
-window.addEventListener('load', () => {
-    setTimeout(() => {
-        const root = document.querySelector('[x-data]');
-        if (root && root.__x) root.__x.$data.init();
-    }, 500);
-});

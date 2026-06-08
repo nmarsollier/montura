@@ -16,5 +16,5 @@ void motors_motion_slew(float ra_target, float dec_target,
         .dec_velocity = dec_vel,
         .tracking_mode = TRACKING_NONE,
     };
-    motors_motion_cmd_send(&cmd, false);
+    motors_motion_cmd_send(&cmd, true);  /* high priority — preempts TRACK */
 }

@@ -28,11 +28,20 @@ void rest_alpaca_server_start(void) {
         return;
     }
 
-    /* ─── Management API ─── */
+    /* ─── Management API ───
+     * Registered at both the versioned and unversioned paths.
+     * The Alpaca spec uses /management/apiversions; many clients also
+     * try /management/v1/apiversions. */
+    rest_register_get(server, "/management/apiversions",
+                      alpaca_management_apiversions_handler);
     rest_register_get(server, "/management/v1/apiversions",
                       alpaca_management_apiversions_handler);
+    rest_register_get(server, "/management/description",
+                      alpaca_management_description_handler);
     rest_register_get(server, "/management/v1/description",
                       alpaca_management_description_handler);
+    rest_register_get(server, "/management/configureddevices",
+                      alpaca_management_configureddevices_handler);
     rest_register_get(server, "/management/v1/configureddevices",
                       alpaca_management_configureddevices_handler);
 

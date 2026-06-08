@@ -6,6 +6,7 @@
  * to a bridge action.  Used by SlewToCoordinates and SyncToCoordinates. */
 static esp_err_t handle_coordinates(httpd_req_t *req,
                                     MountResult (*action)(float, float)) {
+    alpaca_read_body(req);
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     float ra = 0.0f, dec = 0.0f;

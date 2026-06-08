@@ -43,6 +43,14 @@ void motors_motion_init(void);
 void motors_motion_slew(float ra_target_deg, float dec_target_deg,
                                  float ra_velocity, float dec_velocity);
 
+/*
+ * Enqueue a relative slew — the motion task computes absolute targets
+ * from the live axis position at dequeue time so queued commands stack
+ * correctly even when the position changes between enqueue and execution.
+ */
+void motors_motion_slew_relative(float ra_delta, float dec_delta,
+                                 float ra_vel, float dec_vel);
+
 /* Request continuous tracking. Preempts any in-progress slew. */
 void motors_motion_track(TrackingMode mode, float ra_velocity);
 

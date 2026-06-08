@@ -147,6 +147,7 @@ static void ip_event_handler(
     const ip_event_got_ip_t *event = (const ip_event_got_ip_t *) event_data;
 
     wifi_retry_count = 0;
+    setup_ap_started = false;
 
     wifi_config_t config = {0};
     esp_err_t result = esp_wifi_get_config(WIFI_IF_STA, &config);

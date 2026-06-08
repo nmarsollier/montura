@@ -30,6 +30,7 @@ idf_component_register(
         "motors_motion/motors_motion_park.c"
         "motors_motion/motors_motion_queue.c"
         "motors_motion/motors_motion_slew.c"
+        "motors_motion/motors_motion_slew_relative.c"
         "motors_motion/motors_motion_stop.c"
         "motors_motion/motors_motion_sync.c"
         "motors_motion/motors_motion_task.c"

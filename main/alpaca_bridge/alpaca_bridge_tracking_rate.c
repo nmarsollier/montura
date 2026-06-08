@@ -35,13 +35,17 @@ bool alpaca_bridge_get_tracking(void) {
 }
 
 /*
- * Enable (= sidereal) or disable (= none) tracking.
+ * Enable or disable tracking without changing the current rate.
+ * When enabling, the previously-set rate (via TrackingRate) is preserved.
+ * Defaults to sidereal only if no rate was ever set.
  */
 MountResult alpaca_bridge_set_tracking(bool enabled) {
-    if (enabled)
-        return mount_set_tracking(TRACKING_SIDEREAL);
-    else
+    if (!enabled)
         return mount_set_tracking(TRACKING_NONE);
+
+    MotorsState s = motors_current_state();
+    TrackingMode mode = (s.tracking != TRACKING_NONE) ? s.tracking : TRACKING_SIDEREAL;
+    return mount_set_tracking(mode);
 }
 
 /*

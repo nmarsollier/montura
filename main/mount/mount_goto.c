@@ -7,12 +7,6 @@
 
 #include "motors.h"
 
-/*
- * Business use case: execute a GOTO to the requested coordinates.
- *
- * Objective: move the mount to the target selected by the client while
- * validating ranges and operational state.
- */
 MountResult mount_goto(float ra, float dec, int speed) {
     EquatorialCoordinates eq = {
         .ra_hours = ra,

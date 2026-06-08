@@ -78,3 +78,5 @@ CONTINUE.md
 .github/copilot-instructions.md
 
 .cache/
+
+www/node_modules

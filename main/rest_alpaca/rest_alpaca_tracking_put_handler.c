@@ -9,6 +9,7 @@
  * Alpaca usage: N.I.N.A. toggles tracking on/off via this endpoint.
  */
 esp_err_t alpaca_tracking_put_handler(httpd_req_t *req) {
+    alpaca_read_body(req);
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     bool enabled = false;

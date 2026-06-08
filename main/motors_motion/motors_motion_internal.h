@@ -15,14 +15,14 @@
  * -------------------------------------------------------------------------- */
 
 typedef enum {
-    MOTION_CMD_STOP = 0, /* highest priority — preempts everything */
-    MOTION_CMD_PARK, /* highest priority */
-    MOTION_CMD_DISABLE, /* highest priority */
-    MOTION_CMD_TRACK, /* high priority — preempts slewing */
-    MOTION_CMD_MOVE_AXIS, /* normal priority — continuous single-axis motion */
-    MOTION_CMD_SLEW, /* normal priority */
-    MOTION_CMD_ENABLE, /* normal priority */
-    MOTION_CMD_SYNC, /* low priority — just align targets */
+    MOTION_CMD_STOP = 0,    /* highest — preempts everything */
+    MOTION_CMD_PARK,        /* highest */
+    MOTION_CMD_DISABLE,     /* highest */
+    MOTION_CMD_SLEW,        /* high — preempts tracking (goto > track) */
+    MOTION_CMD_TRACK,       /* high — preempts move-axis */
+    MOTION_CMD_MOVE_AXIS,   /* normal */
+    MOTION_CMD_ENABLE,      /* normal */
+    MOTION_CMD_SYNC,        /* low — just align targets */
 } MotionCommandType;
 
 typedef struct {
@@ -32,6 +32,16 @@ typedef struct {
     float ra_velocity;
     float dec_velocity;
     TrackingMode tracking_mode;
+    /*
+     * Relative-move fields.
+     * When `relative` is true, the motion task computes the absolute target
+     * at processing time (position + delta) instead of using ra_target_deg
+     * directly.  This guarantees correct enqueuing when the axis position
+     * changes between the send and the dequeue of the command.
+     */
+    bool relative;
+    float ra_delta_deg;
+    float dec_delta_deg;
 } MotionCommand;
 
 /* Queue handle created by motors_motion_init(), shared with motors_motion_commands.c. */
@@ -47,3 +57,4 @@ int motion_cmd_priority(MotionCommandType type);
  * Shared across per-use-case .c files within the motors_motion module.
  */
 void motors_motion_cmd_send(MotionCommand *cmd, bool high_priority);
+

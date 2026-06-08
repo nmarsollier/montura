@@ -11,7 +11,6 @@
 #include "rest_alpaca.h"
 #include "rest_alpaca_internal.h"
 #include "mount.h"
-#include <math.h>
 
 /* Remember the last rate for each axis so setting one axis to 0
  * does not inadvertently stop the other. */
@@ -19,13 +18,16 @@ static float s_ra_rate  = 0.0f;
 static float s_dec_rate = 0.0f;
 
 esp_err_t alpaca_moveaxis_handler(httpd_req_t *req) {
+    alpaca_read_body(req);
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     int axis = 0;
     float rate = 0.0f;
 
-    if (!alpaca_get_form_int(req, "Axis", &axis) ||
-        !alpaca_get_form_float(req, "Rate", &rate)) {
+    bool got_axis = alpaca_get_form_int(req, "Axis", &axis);
+    bool got_rate = alpaca_get_form_float(req, "Rate", &rate);
+
+    if (!got_axis || !got_rate) {
         alpaca_response_error(req, 1025, "Missing Axis or Rate", cid, stx);
         return ESP_OK;
     }

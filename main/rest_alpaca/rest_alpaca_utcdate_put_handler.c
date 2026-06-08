@@ -10,6 +10,7 @@
  * Alpaca usage: N.I.N.A. syncs the mount clock to the PC clock on connect.
  */
 esp_err_t alpaca_utcdate_put_handler(httpd_req_t *req) {
+    alpaca_read_body(req);
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     char *val = alpaca_get_form_param(req, "UTCDate");

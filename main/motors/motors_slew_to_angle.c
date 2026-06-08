@@ -11,11 +11,6 @@
 static const char *TAG = "MOTORS_SLEW_TO_ANGLE";
 
 MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed) {
-    if (motors_state.status != MOUNT_STATUS_READY) {
-        ESP_LOGW(TAG, "Rejected move-to-angle: motors not ready (status=%d)", motors_state.status);
-        return MOTOR_ERR_NOT_READY;
-    }
-
     float actual_speed = motors_get_slewing_speed((int) speed);
 
     if (!motors_is_valid_ra(degrees)) {
@@ -34,11 +29,6 @@ MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed) {
 }
 
 MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed) {
-    if (motors_state.status != MOUNT_STATUS_READY) {
-        ESP_LOGW(TAG, "Rejected move-to-angle: motors not ready (status=%d)", motors_state.status);
-        return MOTOR_ERR_NOT_READY;
-    }
-
     float actual_speed = motors_get_slewing_speed((int) speed);
 
     if (!motors_is_valid_dec(degrees)) {
@@ -57,11 +47,6 @@ MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed) {
 }
 
 MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed) {
-    if (motors_state.status != MOUNT_STATUS_READY) {
-        ESP_LOGW(TAG, "Rejected move-to-angle: motors not ready (status=%d)", motors_state.status);
-        return MOTOR_ERR_NOT_READY;
-    }
-
     if (!motors_is_valid_ra(ra_deg)) {
         ESP_LOGW(TAG, "Rejected slew: RA out of range (%.3f)", ra_deg);
         return MOTOR_ERR_OUT_OF_RANGE;

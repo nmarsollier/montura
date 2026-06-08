@@ -31,7 +31,7 @@ void alpaca_response_value(httpd_req_t *req, const char *value_json,
              "{\"Value\":%s,\"ClientTransactionID\":%lu,"
              "\"ServerTransactionID\":%lu,\"ErrorNumber\":0,"
              "\"ErrorMessage\":\"\"}",
-             value_json, client_id, server_tx);
+             value_json, (unsigned long) client_id, (unsigned long) server_tx);
     alpaca_send_json(req, buf);
 }
 
@@ -42,7 +42,7 @@ void alpaca_response_ok(httpd_req_t *req,
              "{\"ClientTransactionID\":%lu,"
              "\"ServerTransactionID\":%lu,\"ErrorNumber\":0,"
              "\"ErrorMessage\":\"\"}",
-             client_id, server_tx);
+             (unsigned long) client_id, (unsigned long) server_tx);
     alpaca_send_json(req, buf);
 }
 
@@ -55,7 +55,8 @@ void alpaca_response_error(httpd_req_t *req, int error_number,
              "\"ServerTransactionID\":%lu,"
              "\"ErrorNumber\":%d,"
              "\"ErrorMessage\":\"%s\"}",
-             client_id, server_tx, error_number, message);
+             (unsigned long) client_id, (unsigned long) server_tx,
+             error_number, message);
     alpaca_send_json(req, buf);
 }
 
@@ -76,25 +77,51 @@ uint32_t alpaca_get_client_id(httpd_req_t *req) {
     return (uint32_t) atol(value);
 }
 
-char *alpaca_get_form_param(httpd_req_t *req, const char *key) {
-    char *body = malloc(512);
-    if (!body) return NULL;
+/*
+ * Request body buffer — read once per request by the handler.
+ * Multiple form-param reads operate on this buffer, avoiding the
+ * "body consumed" issue with httpd_req_recv.
+ *
+ * N.B. ESP-IDF reuses httpd_req_t objects so pointer-based caching
+ * is NOT safe across requests — the handler MUST call alpaca_read_body
+ * at the top of each handler that uses form params.
+ */
+static char  s_body_buf[512];
+static int   s_body_len = 0;
 
-    int ret = httpd_req_recv(req, body, 511);
-    if (ret <= 0) {
-        free(body);
-        return NULL;
+void alpaca_read_body(httpd_req_t *req) {
+    /* Only read the body if the client sent one — httpd_req_recv on a
+     * request without Content-Length can block long enough to trigger
+     * the task watchdog (SW_CPU_RESET). */
+    char cl[16] = {0};
+    bool has_body = httpd_req_get_hdr_value_str(req, "Content-Length", cl, sizeof(cl)) == ESP_OK
+                    && atoi(cl) > 0;
+
+    s_body_len = 0;
+    s_body_buf[0] = '\0';
+    if (has_body) {
+        int ret = httpd_req_recv(req, s_body_buf, sizeof(s_body_buf) - 1);
+        s_body_len = (ret > 0) ? ret : 0;
+        s_body_buf[s_body_len] = '\0';
     }
-    body[ret] = '\0';
+}
 
-    /* Parse key=value from URL-encoded body.
-       Simple parser: find key, then extract value until & or end. */
+const char *alpaca_dump_body(httpd_req_t *req, int *out_len) {
+    (void) req;
+    if (out_len) *out_len = s_body_len;
+    return (s_body_len > 0) ? s_body_buf : "";
+}
+
+char *alpaca_get_form_param(httpd_req_t *req, const char *key) {
+    (void) req;
+    if (s_body_len <= 0) return NULL;
+
     size_t key_len = strlen(key);
-    char *p = body;
+    const char *p = s_body_buf;
     while (*p) {
         if (strncmp(p, key, key_len) == 0 && p[key_len] == '=') {
             p += key_len + 1;
-            char *val_end = p;
+            const char *val_end = p;
             while (*val_end && *val_end != '&') val_end++;
             size_t vlen = val_end - p;
             char *value = malloc(vlen + 1);
@@ -102,20 +129,35 @@ char *alpaca_get_form_param(httpd_req_t *req, const char *key) {
                 memcpy(value, p, vlen);
                 value[vlen] = '\0';
             }
-            free(body);
             return value;
         }
-        /* Skip to next & */
         while (*p && *p != '&') p++;
         if (*p == '&') p++;
     }
-
-    free(body);
     return NULL;
 }
 
+/*
+ * Try to read a parameter value from the query string, falling back to
+ * the URL-encoded form body.  The Alpaca spec allows both; N.I.N.A. uses
+ * the query string for MoveAxis and similar methods.
+ */
+static char *alpaca_get_param_str(httpd_req_t *req, const char *key) {
+    /* 1. Query string */
+    char qbuf[128];
+    if (httpd_req_get_url_query_str(req, qbuf, sizeof(qbuf)) == ESP_OK) {
+        char val[64];
+        if (httpd_query_key_value(qbuf, key, val, sizeof(val)) == ESP_OK) {
+            return strdup(val);
+        }
+    }
+
+    /* 2. Form body */
+    return alpaca_get_form_param(req, key);
+}
+
 bool alpaca_get_form_float(httpd_req_t *req, const char *key, float *out) {
-    char *val = alpaca_get_form_param(req, key);
+    char *val = alpaca_get_param_str(req, key);
     if (!val) return false;
     *out = (float) atof(val);
     free(val);
@@ -123,7 +165,7 @@ bool alpaca_get_form_float(httpd_req_t *req, const char *key, float *out) {
 }
 
 bool alpaca_get_form_bool(httpd_req_t *req, const char *key, bool *out) {
-    char *val = alpaca_get_form_param(req, key);
+    char *val = alpaca_get_param_str(req, key);
     if (!val) return false;
     if (strcasecmp(val, "true") == 0 || strcmp(val, "1") == 0)
         *out = true;
@@ -134,7 +176,7 @@ bool alpaca_get_form_bool(httpd_req_t *req, const char *key, bool *out) {
 }
 
 bool alpaca_get_form_int(httpd_req_t *req, const char *key, int *out) {
-    char *val = alpaca_get_form_param(req, key);
+    char *val = alpaca_get_param_str(req, key);
     if (!val) return false;
     *out = atoi(val);
     free(val);

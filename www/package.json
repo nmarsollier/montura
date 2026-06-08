@@ -3,5 +3,8 @@
   "version": "0.1.0",
   "scripts": {
     "build": "node build.js"
+  },
+  "dependencies": {
+    "alpinejs": "^3.15.12"
   }
 }

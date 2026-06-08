@@ -5,23 +5,26 @@
 #include "driver/uart.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 /*
  * ESP32 UART port used to communicate with both TMC2209 drivers.
- * UART_NUM_2 is chosen because UART_NUM_0 is typically occupied by the
- * debug console and UART_NUM_1 may be in use by other peripherals.
- * The single-wire bus (TX and RX shorted) connects to the pins defined below.
+ * UART_NUM_2 is chosen because UART_NUM_0 is the debug console and
+ * UART_NUM_1 may be in use by other peripherals.
+ *
+ * SINGLE-WIRE BUS: the TMC2209 PDN_UART pin connects through a series
+ * resistor to both ESP32 TX (GPIO 17) and ESP32 RX (GPIO 16).
+ * The TX pad is configured as open-drain with internal pull-up so the
+ * ESP32 only pulls the line LOW; when it releases, the TMC2209 can
+ * drive the response without the ESP32 TX output stage fighting it.
  */
 #define TMC_UART_NUM          UART_NUM_2
 
 /*
- * TMC2209 UART GPIO pins.
- *   TX (GPIO_NUM_17) — write data to the drivers
- *   RX (GPIO_NUM_16) — read data from the drivers
- * Both pins are physically shorted on the single-wire bus as required
- * by the TMC2209 protocol.
+ * TMC2209 UART GPIO pins (separate ESP32 pads, shorted at the TMC side).
+ * GPIO 17 = TX (data to drivers), GPIO 16 = RX (data from drivers).
+ * Both connect to the same PDN_UART pin on the TMC2209 via a series
+ * resistor on the TX leg.
  */
 #define TMC_UART_TX_GPIO      GPIO_NUM_17
 #define TMC_UART_RX_GPIO      GPIO_NUM_16
@@ -251,11 +254,11 @@ static esp_err_t tmc_read_register(uint8_t address, uint8_t reg, uint32_t *value
 
     uart_wait_tx_done(TMC_UART_NUM, pdMS_TO_TICKS(10));
 
-    // ABSORB ECHO: Read back the 4 bytes the ESP32 sent that bounced on the single-wire bus
+    /* Absorb the 4-byte echo from the single-wire bus. */
     uint8_t echo_buffer[4];
     uart_read_bytes(TMC_UART_NUM, echo_buffer, sizeof(request), pdMS_TO_TICKS(10));
 
-    // Read the actual response sent by the TMC2209 driver
+    /* Read the TMC2209 response frame. */
     uint8_t response[32];
     int len = 0;
     TickType_t start = xTaskGetTickCount();
@@ -519,8 +522,27 @@ esp_err_t tmc2209_hw_init(void) {
     result = uart_param_config(TMC_UART_NUM, &config);
     if (result != ESP_OK) return result;
 
-    result = uart_set_pin(TMC_UART_NUM, TMC_UART_TX_GPIO, TMC_UART_RX_GPIO, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    /*
+     * TX and RX are separate ESP32 pads (GPIO 17, GPIO 16) but share the
+     * same TMC2209 PDN_UART pin via a series resistor on the TX leg.
+     *
+     * No open-drain GPIO reconfiguration is done here — that would risk
+     * disconnecting the pin from the UART peripheral through the IO MUX.
+     * Instead, the read path (tmc_read_register) temporarily floats the
+     * TX pin by switching it to input before receiving the TMC response,
+     * and restores it to UART-controlled output afterwards.
+     */
+    result = uart_set_pin(TMC_UART_NUM,
+                          TMC_UART_TX_GPIO, TMC_UART_RX_GPIO,
+                          UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     if (result != ESP_OK) return result;
+
+    /*
+     * Enable a weak internal pull-up on the RX pin so the single-wire bus
+     * has a defined idle level when neither the ESP32 nor the TMC2209 is
+     * driving it.
+     */
+    gpio_set_pull_mode(TMC_UART_RX_GPIO, GPIO_PULLUP_ONLY);
 
 
     // Initialisation loop for RA and DEC axes

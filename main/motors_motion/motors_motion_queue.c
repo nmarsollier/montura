@@ -28,9 +28,9 @@ int motion_cmd_priority(MotionCommandType type) {
         case MOTION_CMD_STOP:    return 0;
         case MOTION_CMD_PARK:    return 0;
         case MOTION_CMD_DISABLE: return 0;
-        case MOTION_CMD_TRACK:     return 1;
+        case MOTION_CMD_SLEW:      return 1;
+        case MOTION_CMD_TRACK:     return 2;
         case MOTION_CMD_MOVE_AXIS: return 2;
-        case MOTION_CMD_SLEW:      return 2;
         case MOTION_CMD_ENABLE:    return 2;
         case MOTION_CMD_SYNC:      return 3;
         default:                 return 99;
@@ -60,14 +60,16 @@ void motors_motion_cmd_send(MotionCommand *cmd, bool high_priority) {
     }
 
     if (high_priority) {
-        /* Send to front — preempts queued lower-priority commands. */
+        /* Send to front — preempts queued lower-priority commands.
+         * If the queue is full, drain the oldest (back) entry to make room. */
         if (xQueueSendToFront(motion_cmd_queue, cmd, pdMS_TO_TICKS(10)) != pdTRUE) {
-            /* Queue full — overwrite the front element (keep the newest). */
-            xQueueOverwriteFromISR(motion_cmd_queue, cmd, NULL);
+            MotionCommand discard;
+            xQueueReceive(motion_cmd_queue, &discard, 0);
+            xQueueSendToFront(motion_cmd_queue, cmd, pdMS_TO_TICKS(10));
         }
     } else {
         if (xQueueSendToBack(motion_cmd_queue, cmd, pdMS_TO_TICKS(10)) != pdTRUE) {
-            ESP_LOGW(TAG, "Motion command queue full, dropping normal-priority cmd type=%d", cmd->type);
+            ESP_LOGW(TAG, "Queue full, dropping cmd type=%d", cmd->type);
         }
     }
 }

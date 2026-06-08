@@ -9,7 +9,7 @@
 #include "mount.h"
 
 MountResult alpaca_bridge_slew_to_coordinates(float ra_hours, float dec_deg) {
-    return mount_goto(ra_hours, dec_deg, 2);
+    return mount_goto(ra_hours, dec_deg, 4);
 }
 
 MountResult alpaca_bridge_sync_to_coordinates(float ra_hours, float dec_deg) {

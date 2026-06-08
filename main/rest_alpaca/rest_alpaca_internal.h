@@ -21,7 +21,7 @@
 #define ALPACA_MAX_URI_HANDLERS   64
 
 /* ─── Telescope device ─── */
-#define ALPACA_DEVICE_NAME        "Monturita Telescope"
+#define ALPACA_DEVICE_NAME        "Monturita"
 #define ALPACA_DEVICE_TYPE        "Telescope"
 #define ALPACA_DEVICE_NUMBER      0
 #define ALPACA_UNIQUE_ID          "monturita-telescope-001"
@@ -93,4 +93,13 @@ bool alpaca_get_form_int(httpd_req_t *req, const char *key, int *out);
  * Get the next server transaction ID (monotonically increasing).
  */
 uint32_t alpaca_next_server_tx(void);
+
+/*
+ * Read the request body once into the shared buffer.
+ * MUST be called before any alpaca_get_form_*() calls in the same handler.
+ */
+void alpaca_read_body(httpd_req_t *req);
+
+/* Diagnostic: return the shared body buffer. */
+const char *alpaca_dump_body(httpd_req_t *req, int *out_len);
 
