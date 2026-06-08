@@ -44,16 +44,11 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
     char dec_sign = data.dec.sign >= 0 ? '+' : '-';
     bool wifi_ap = network_is_setup_ap_started();
 
-    int len = snprintf(NULL, 0, format,
-                       status, tracking,
-                       data.ra.hours, data.ra.minutes, data.ra.seconds,
-                       dec_sign, data.dec.degrees, data.dec.minutes, data.dec.seconds,
-                       time_buf,
-                       data.settings.lat, data.settings.lon, data.settings.elevation,
-                       wifi_ap ? "true" : "false");
-
-    char response[len + 1];
-
+    /*
+     * Fixed-size buffer — the JSON response fits comfortably in 512 bytes.
+     * Avoiding snprintf(NULL, 0, ...) + VLA removes the duplicate format call.
+     */
+    char response[512];
     snprintf(response, sizeof(response), format,
              status, tracking,
              data.ra.hours, data.ra.minutes, data.ra.seconds,

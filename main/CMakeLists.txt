@@ -162,7 +162,6 @@ idf_component_register(
         "rest_alpaca/rest_alpaca_slewtotargetasync_handler.c"
         "rest_alpaca/rest_alpaca_supportedactions_handler.c"
         "rest_alpaca/rest_alpaca_synctoaltaz_handler.c"
-        "rest_alpaca/rest_alpaca_synctocoordinates_handler.c"
         "rest_alpaca/rest_alpaca_synctotarget_handler.c"
         "rest_alpaca/rest_alpaca_targetdec_handler.c"
         "rest_alpaca/rest_alpaca_targetdec_put_handler.c"
