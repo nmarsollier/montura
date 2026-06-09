@@ -93,5 +93,5 @@ MountResult mount_set_system_time(const char *iso_time) {
         ESP_LOGW(TAG, "Failed to set system time");
         return mount_result_error("Failed to set system time");
     }
-    return mount_result_ok("System time updated");
+    return mount_result_ok();
 }

@@ -23,7 +23,7 @@ MountResult mount_move_axis_ra(float degrees, int speed) {
         return motors_result_code_error_result(rc);
     }
 
-    return mount_result_ok("Move axis started");
+    return mount_result_ok();
 }
 
 /*
@@ -43,5 +43,5 @@ MountResult mount_move_axis_dec(float degrees, int speed) {
         return motors_result_code_error_result(rc);
     }
 
-    return mount_result_ok("Move axis started");
+    return mount_result_ok();
 }

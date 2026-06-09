@@ -52,6 +52,7 @@ idf_component_register(
         "mount/mount_settings_save.c"
         "mount/mount_stop.c"
         "mount/mount_sync.c"
+        "mount/mount_sync_position.c"
         "mount/mount_set_system_time.c"
         "mount/mount_tools.c"
         "mount/mount_set_tracking.c"

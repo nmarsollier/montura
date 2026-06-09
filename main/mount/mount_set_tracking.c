@@ -24,5 +24,5 @@ MountResult mount_set_tracking(TrackingMode tracking) {
         }
     }
 
-    return mount_result_ok("Tracking changed");
+    return mount_result_ok();
 }

@@ -15,5 +15,5 @@
 MountResult mount_stop(void) {
     motors_stop();
 
-    return mount_result_ok("Motion stopped");
+    return mount_result_ok();
 }

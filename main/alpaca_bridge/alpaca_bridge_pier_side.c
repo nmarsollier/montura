@@ -19,5 +19,5 @@ MountResult alpaca_bridge_set_side_of_pier(int side) {
     if (side != 0 && side != 1)
         return mount_result_error("Invalid pier side");
     alpaca_bridge_state.side_of_pier = side;
-    return mount_result_ok("Pier side set");
+    return mount_result_ok();
 }

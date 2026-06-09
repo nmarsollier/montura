@@ -7,7 +7,7 @@
 /* Internal mount state stored by the mount module. */
 extern MountSettings mount_internal_state;
 
-MountResult mount_result_ok(const char *message);
+MountResult mount_result_ok(void);
 
 MountResult mount_result_error(const char *message);
 

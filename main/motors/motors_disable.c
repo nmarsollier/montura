@@ -5,9 +5,6 @@
 #include "motors.h"
 #include "motors_motion.h"
 
-#include "esp_log.h"
-#include "esp_timer.h"
-
 /*
  * Place the motors subsystem into a disabled state.
  */

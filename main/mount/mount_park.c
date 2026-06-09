@@ -14,10 +14,10 @@
  */
 MountResult mount_park(void) {
     if (motors_current_state().status == MOUNT_STATUS_PARKED) {
-        return mount_result_ok("Mount parked");
+        return mount_result_ok();
     }
 
     motors_park();
 
-    return mount_result_ok("Mount parked");
+    return mount_result_ok();
 }

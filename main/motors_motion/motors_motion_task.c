@@ -95,36 +95,38 @@ static struct {
 /*
  * Velocity profiles — 2 rows × 100 columns.
  *
- * Row 0:  < 35°  — 30 % linear accel, 40 % cruise, 30 % decel.
- * Row 1:  ≥ 35°  — 10 % quadratic accel, 60 % cruise, 30 % decel.
+ * Row 0:  < 35°  — 30 % linear accel, 40 % cruise, 30 % linear decel.
+ * Row 1:  ≥ 35°  — 10 % quadratic accel, 60 % cruise, 30 % linear decel.
  *
  * Each value is the percentage of (target_vel − MIN_SLEW_VEL) to add
  * on top of MIN_SLEW_VEL at that point.
  */
-static const uint8_t ramp_pct[2][100] = {
-    { /* < 35°: 30 % linear accel, 40 % cruise, 30 % decel */
-          0,   3,   7,  10,  14,  17,  21,  24,  28,  31,
-         34,  38,  41,  45,  48,  52,  55,  59,  62,  66,
-         69,  72,  76,  79,  83,  86,  90,  93,  97, 100,
+static const uint8_t VELOCITY_CURVE[2][100] = {
+    {
+        /* < 35°: 30 % linear accel, 40 % cruise, 30 % linear decel */
+        0, 3, 7, 10, 14, 17, 21, 24, 28, 31,
+        34, 38, 41, 45, 48, 52, 55, 59, 62, 66,
+        69, 72, 76, 79, 83, 86, 90, 93, 97, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
-        100, 100,  99,  97,  95,  92,  89,  85,  81,  77,
-         73,  68,  63,  58,  53,  47,  42,  37,  32,  27,
-         23,  19,  15,  11,   8,   5,   3,   1,   0,   0,
+        100, 97, 93, 90, 86, 83, 79, 76, 72, 69,
+        66, 62, 59, 55, 52, 48, 45, 41, 38, 34,
+        31, 28, 24, 21, 17, 14, 10, 7, 3, 0,
     },
-    { /* ≥ 35°: 10 % quadratic accel, 60 % cruise, 30 % decel */
-          0,   1,   5,  11,  20,  31,  44,  60,  79, 100,
+    {
+        /* ≥ 35°: 10 % quadratic accel, 60 % cruise, 30 % linear decel */
+        0, 1, 5, 11, 20, 31, 44, 60, 79, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
-        100, 100,  99,  97,  95,  92,  89,  85,  81,  77,
-         73,  68,  63,  58,  53,  47,  42,  37,  32,  27,
-         23,  19,  15,  11,   8,   5,   3,   1,   0,   0,
+        100, 97, 93, 90, 86, 83, 79, 76, 72, 69,
+        66, 62, 59, 55, 52, 48, 45, 41, 38, 34,
+        31, 28, 24, 21, 17, 14, 10, 7, 3, 0,
     },
 };
 
@@ -149,13 +151,15 @@ static float ramp_velocity(int target_vel_cds, int position_cds,
     }
 
     int curve = (distance_cds >= FAST_SLEW_CDS
-                 && motors_state.status == MOUNT_STATUS_SLEWING) ? 1 : 0;
+                 && motors_state.status == MOUNT_STATUS_SLEWING)
+                    ? 1
+                    : 0;
 
     int travelled = position_cds - start_position_cds;
     if (travelled < 0) travelled = -travelled;
     int percent_index = (int) ((int64_t) travelled * 99 / distance_cds);
 
-    int vel = MIN_SLEW_CDS + (capped_vel - MIN_SLEW_CDS) * ramp_pct[curve][percent_index] / 100;
+    int vel = MIN_SLEW_CDS + (capped_vel - MIN_SLEW_CDS) * VELOCITY_CURVE[curve][percent_index] / 100;
     return (float) vel / 100.0f;
 }
 

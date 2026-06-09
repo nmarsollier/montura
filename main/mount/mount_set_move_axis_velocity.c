@@ -11,5 +11,5 @@
 MountResult mount_set_move_axis_velocity(float rate_ra, float rate_dec) {
     motors_set_move_axis_velocity(rate_ra, rate_dec);
 
-    return mount_result_ok("Move axis velocity applied");
+    return mount_result_ok();
 }

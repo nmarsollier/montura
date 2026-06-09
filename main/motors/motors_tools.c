@@ -3,13 +3,8 @@
  * Purpose: motors enum/string helpers and state utilities.
  */
 #include "motors.h"
-
-#include "esp_timer.h"
-
-#include <stdbool.h>
-#include <string.h>
-
 #include "utils/utils.h"
+#include <string.h>
 
 /*
  * Status string helpers live here so the motors module remains the canonical

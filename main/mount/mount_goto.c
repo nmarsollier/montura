@@ -22,5 +22,5 @@ MountResult mount_goto(float ra, float dec, int speed) {
         return mount_result_error("Failed to start GOTO");
     }
 
-    return mount_result_ok("GOTO started");
+    return mount_result_ok();
 }

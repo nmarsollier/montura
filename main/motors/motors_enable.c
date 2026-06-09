@@ -5,9 +5,6 @@
 #include "motors.h"
 #include "motors_motion.h"
 
-#include "esp_log.h"
-#include "esp_timer.h"
-
 /*
  * Bring the motors back to an operational state.
  * Hardware enable happens immediately; the command notifies the task.

@@ -21,5 +21,5 @@ MountResult mount_settings_update(MountSettings settings) {
     /* Persist the updated settings. */
     mount_settings_save(&mount_internal_state);
 
-    return mount_result_ok("Settings updated");
+    return mount_result_ok();
 }

@@ -17,5 +17,5 @@ int alpaca_bridge_get_slew_settle_time(void) {
 
 MountResult alpaca_bridge_set_slew_settle_time(int seconds) {
     alpaca_bridge_state.slew_settle_time = seconds;
-    return mount_result_ok("Slew settle time set");
+    return mount_result_ok();
 }

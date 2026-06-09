@@ -30,5 +30,5 @@ MountResult mount_sync(float ra, float dec) {
 
     motors_sync_position(axis.ra_axis_deg, axis.dec_axis_deg);
 
-    return mount_result_ok("SYNC applied");
+    return mount_result_ok();
 }

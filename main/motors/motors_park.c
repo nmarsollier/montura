@@ -5,9 +5,6 @@
 #include "motors.h"
 #include "motors_motion.h"
 
-#include "esp_log.h"
-#include "esp_timer.h"
-
 void motors_park(void) {
     motors_state.status = MOUNT_STATUS_PARKED;
     motors_state.tracking = TRACKING_NONE;

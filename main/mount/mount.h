@@ -175,6 +175,12 @@ MountResult mount_move_axis_dec(float degrees, int speed);
  */
 MountResult mount_set_move_axis_velocity(float rate_ra, float rate_dec);
 
+/*
+ * Set the mount's axis position directly (no physical move).
+ * Used by the HOME long-press to mark the current position as home.
+ */
+MountResult mount_sync_position(float ra_axis_deg, float dec_axis_deg);
+
 /* Convert RA from HMS struct to decimal hours. */
 float mount_get_ra_hours(void);
 

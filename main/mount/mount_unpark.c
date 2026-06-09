@@ -16,5 +16,5 @@
 MountResult mount_unpark(void) {
     motors_enable();
 
-    return mount_result_ok("Mount unparked");
+    return mount_result_ok();
 }

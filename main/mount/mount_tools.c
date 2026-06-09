@@ -8,38 +8,19 @@
 #include "motors.h"
 
 /*
- * Business use case: normalize mount command responses.
- *
- * Objective: provide a uniform success/error contract for REST and UI
- * clients.
- */
-MountResult mount_result_ok(const char *message) {
-    MountResult result = {
-        .ok = true,
-        .message = message
-    };
-
-    return result;
-}
-
-/*
- * Convert RA from HMS struct to decimal hours.
- * Used by the Alpaca layer and screen module to report the current position.
+ * Current RA in decimal hours, read directly from the authoritative
+ * motor position (axis degrees).  RA hour = axis_deg / 15.
  */
 float mount_get_ra_hours(void) {
-    VisibleStatusData d = mount_get_visible_status();
-    return (float) d.ra.hours + (float) d.ra.minutes / 60.0f
-           + d.ra.seconds / 3600.0f;
+    MotorsState s = motors_current_state();
+    AxisCoordinates axis = {.ra_axis_deg = s.ra_position, .dec_axis_deg = s.dec_position};
+    return axis_to_equatorial(axis).ra_hours;
 }
 
-/*
- * Convert DEC from DMS struct to decimal degrees.
- */
 float mount_get_dec_deg(void) {
-    VisibleStatusData d = mount_get_visible_status();
-    float deg = (float) d.dec.degrees + (float) d.dec.minutes / 60.0f
-                + d.dec.seconds / 3600.0f;
-    return (float) d.dec.sign * deg;
+    MotorsState s = motors_current_state();
+    AxisCoordinates axis = {.ra_axis_deg = s.ra_position, .dec_axis_deg = s.dec_position};
+    return axis_to_equatorial(axis).dec_deg;
 }
 
 MountResult mount_result_error(const char *message) {
@@ -49,6 +30,16 @@ MountResult mount_result_error(const char *message) {
     };
 
     return result;
+}
+
+/*
+ * Business use case: normalize mount command responses.
+ *
+ * Objective: provide a uniform success/error contract for REST and UI
+ * clients.
+ */
+MountResult mount_result_ok() {
+    return (MountResult){.ok = true, .message = "OK"};
 }
 
 MountResult motors_result_code_error_result(MotorResultCode rc) {

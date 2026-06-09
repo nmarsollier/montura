@@ -111,16 +111,14 @@
  * With IRUN = 14:  I_RMS = (14/32) * 1.41 A = 617 mA RMS
  * With IHOLD = 6:  I_RMS = (6/32) * 1.41 A = 264 mA RMS
  *
- * These values are deliberately below the motor's rated maximum
- * (typical NEMA 17 ~1.4 A) to:
- *   - Prevent motor and driver overheating
- *   - Reduce power consumption during long tracking sessions
- *   - Maintain sufficient torque to move the mount without saturation
+ * Increased from 6/14 to handle extra load (guidescope + counterweight).
+ * At 22/32 the driver delivers ~970 mA RMS — still well within the
+ * motor's 1.4 A rating and the TMC2209's thermal limits.
  *
  * Reference: TMC2209 datasheet, Table 8.40 (IHOLD_IRUN).
  */
-#define TMC_IHOLD       6   /* Hold current:  ~264 mA RMS */
-#define TMC_IRUN       14   /* Run current:   ~617 mA RMS */
+#define TMC_IHOLD      16   /* Hold current:  ~705 mA RMS */
+#define TMC_IRUN       22   /* Run current:   ~970 mA RMS */
 #define TMC_IHOLDDELAY  1   /* Standard IRUN->IHOLD delay */
 
 /*
@@ -369,18 +367,18 @@ static esp_err_t tmc_set_microsteps(const TmcAxis *axis, uint16_t microsteps) {
     uint32_t updated = (chopconf & ~(0x0FU << 24)) | ((uint32_t) mres << 24);
 
     // =========================================================================
-    // ASTRONOMICAL CONFIGURATION: FORCE STEALTHCHOP AND INTERPOLATION
+    // ASTRONOMICAL CONFIGURATION: SPREADCYCLE + INTERPOLATION
     // =========================================================================
 
-    // Clear Bit 14 (en_spreadcycle = 0) -> Force ultra-quiet StealthChop mode
-    updated &= ~(1U << 14);
+    // Bit 14 = 1 -> SpreadCycle (more torque, slightly audible)
+    updated |= (1U << 14);
 
     // Set Bit 28 (intpol = 1) -> Enable hardware interpolation to TMC_TARGET_MICROSTEPS microsteps
     updated |= (1U << 28);
 
     // =========================================================================
 
-    ESP_LOGI(TAG, "%s: Applying CHOPCONF (MRES=%u, StealthChop=ON, Intpol=ON)", axis->name, mres);
+    ESP_LOGI(TAG, "%s: Applying CHOPCONF (MRES=%u, SpreadCycle=ON, Intpol=ON)", axis->name, mres);
 
     // 3. Write the optimised CHOPCONF register to the driver
     result = tmc_write_register(axis->address, TMC_REG_CHOPCONF, updated);
