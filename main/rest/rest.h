@@ -16,7 +16,7 @@ void rest_server_start(void);
 
 esp_err_t rest_status_handler(httpd_req_t *request);
 
-esp_err_t rest_screen_handler(httpd_req_t *request);
+esp_err_t rest_html_handler(httpd_req_t *request);
 
 esp_err_t rest_tracking_handler(httpd_req_t *request);
 

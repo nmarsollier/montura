@@ -3,7 +3,7 @@
  * Purpose: persist mount settings in NVS.
  */
 #include "mount_internal.h"
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 #include "nvs.h"
 

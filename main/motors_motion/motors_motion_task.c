@@ -1,3 +1,4 @@
+
 /* MotorsMotion - motors_motion_task.c
  *
  * Purpose: FreeRTOS motion task — consumes commands from the priority queue
@@ -82,98 +83,80 @@ static struct {
  * -------------------------------------------------------------------------- */
 
 /*
- * Fixed acceleration / deceleration distance in degrees.
- *
- * Every slew reserves the first RAMP_DEGREES for acceleration and the
- * last RAMP_DEGREES for deceleration — regardless of total distance.
- * This guarantees visible, perceptible ramps even for short slews.
- *
- * When total distance < 2 × RAMP_DEGREES (i.e. < 16°) the ramp distance
- * is halved so the entire motion becomes a triangular profile: first
- * half accelerating, second half decelerating, no cruise phase.
- *
- *   Slew 30° :  8° ↑  +  14° →  +  8° ↓
- *   Slew 10° :  5° ↑  +   5° ↓        (triangular, 10 < 16)
- *   Slew  6° :  3° ↑  +   3° ↓        (triangular)
+ * Minimum slew velocity in centidegrees/second (80 = 0.80 °/s).
  */
-#define RAMP_DEGREES 8.0f
+#define MIN_SLEW_CDS 80
+
+/* Distance thresholds in centidegrees. */
+#define SHORT_SLEW_CDS   200   /*   2° — constant slow speed */
+#define GENTLE_SLEW_CDS  800   /*   8° — cap target speed    */
+#define FAST_SLEW_CDS   3500   /*  35° — aggressive profile  */
 
 /*
- * Minimum velocity factor during ramp.
+ * Velocity profiles — 2 rows × 100 columns.
  *
- * 0.2 = 20 % of target velocity.  Combined with the quadratic curve,
- * the ramp holds this floor for the first sqrt(0.2) ≈ 45 % of the
- * ramp distance — a long, flat initial phase that lets the rotor
- * overcome static friction before acceleration begins in earnest.
- * At 16 °/s the first step fires at 3.2 °/s (~1.1 ms period).
+ * Row 0:  < 35°  — 30 % linear accel, 40 % cruise, 30 % decel.
+ * Row 1:  ≥ 35°  — 10 % quadratic accel, 60 % cruise, 30 % decel.
+ *
+ * Each value is the percentage of (target_vel − MIN_SLEW_VEL) to add
+ * on top of MIN_SLEW_VEL at that point.
  */
-#define MIN_RAMP_FACTOR 0.2f
+static const uint8_t ramp_pct[2][100] = {
+    { /* < 35°: 30 % linear accel, 40 % cruise, 30 % decel */
+          0,   3,   7,  10,  14,  17,  21,  24,  28,  31,
+         34,  38,  41,  45,  48,  52,  55,  59,  62,  66,
+         69,  72,  76,  79,  83,  86,  90,  93,  97, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100,  99,  97,  95,  92,  89,  85,  81,  77,
+         73,  68,  63,  58,  53,  47,  42,  37,  32,  27,
+         23,  19,  15,  11,   8,   5,   3,   1,   0,   0,
+    },
+    { /* ≥ 35°: 10 % quadratic accel, 60 % cruise, 30 % decel */
+          0,   1,   5,  11,  20,  31,  44,  60,  79, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+        100, 100,  99,  97,  95,  92,  89,  85,  81,  77,
+         73,  68,  63,  58,  53,  47,  42,  37,  32,  27,
+         23,  19,  15,  11,   8,   5,   3,   1,   0,   0,
+    },
+};
 
 /*
- * Compute the effective velocity for an axis during a slew, applying
- * acceleration and deceleration ramps.
+ * Compute the effective velocity for a single axis during a slew.
  *
- * Ramp distance is fixed at RAMP_DEGREES (or total_dist / 2 when the
- * total is less than 2 × RAMP_DEGREES).  The curve is quadratic (t²) —
- * starts very flat and progressively steepens.  This produces a visibly
- * smooth ease-in / ease-out compared to a linear ramp.
- *
- * During TRACKING the ramp is bypassed — tracking speeds are too low to
- * benefit from ramping and the velocity must remain constant.
+ * Parameters are in centidegrees / centidegrees-per-second (×100 integers).
+ * Only the return value is converted back to deg/s (float).
  */
-static float ramped_velocity(float target_vel, float position,
-                             float start_pos, float target_pos) {
-    if (motors_state.status != MOUNT_STATUS_SLEWING)
-        return target_vel;
+static float ramp_velocity(int target_vel_cds, int position_cds,
+                           int start_position_cds, int distance_cds) {
+    if (distance_cds == 0)
+        return (float) target_vel_cds / 100.0f;
 
-    float total_dist = fabsf(target_pos - start_pos);
-    if (total_dist < 1e-6f)
-        return target_vel;
+    if (distance_cds < SHORT_SLEW_CDS)
+        return (float) MIN_SLEW_CDS / 100.0f;
 
-    float traveled = fabsf(position - start_pos);
-    float remaining = fabsf(target_pos - position);
-
-    /*
-     * Fixed ramp distance: RAMP_DEGREES for slews ≥ 2× RAMP_DEGREES,
-     * half the total for shorter slews (triangular velocity profile).
-     */
-    float ramp_dist;
-    if (total_dist >= (RAMP_DEGREES * 2.0f)) {
-        ramp_dist = RAMP_DEGREES;
-    } else {
-        ramp_dist = total_dist * 0.5f;
+    int capped_vel = target_vel_cds;
+    if (distance_cds < GENTLE_SLEW_CDS) {
+        int speed_limit = MIN_SLEW_CDS * 4;
+        if (capped_vel > speed_limit) capped_vel = speed_limit;
     }
 
-    float ramp = 1.0f;
+    int curve = (distance_cds >= FAST_SLEW_CDS
+                 && motors_state.status == MOUNT_STATUS_SLEWING) ? 1 : 0;
 
-    if (traveled < ramp_dist) {
-        /* Acceleration — quadratic ease-in (t²) */
-        float t = traveled / ramp_dist;
-        ramp = t * t;
-        if (ramp < MIN_RAMP_FACTOR) ramp = MIN_RAMP_FACTOR;
-    } else if (remaining < ramp_dist) {
-        /* Deceleration — quadratic ease-out (t² mirrored) */
-        float t = remaining / ramp_dist;
-        ramp = t * t;
-        if (ramp < MIN_RAMP_FACTOR) ramp = MIN_RAMP_FACTOR;
-    }
-    /* else: cruise phase — ramp stays at 1.0 */
+    int travelled = position_cds - start_position_cds;
+    if (travelled < 0) travelled = -travelled;
+    int percent_index = (int) ((int64_t) travelled * 99 / distance_cds);
 
-    float velocity = target_vel * ramp;
-
-    /*
-     * Distance-based velocity ceiling for smooth short slews.
-     * The ramp algorithm above uses the full target_vel internally so the
-     * acceleration / deceleration shape is preserved; only the final output
-     * is clamped so the axis never outruns the available ramp distance.
-     */
-    if (total_dist <= 1.0f && velocity > 3.0f) {
-        return 3.0f;
-    }
-    if (total_dist <= 3.0f && velocity > 5.0f) {
-        return 5.0f;
-    }
-    return velocity;
+    int vel = MIN_SLEW_CDS + (capped_vel - MIN_SLEW_CDS) * ramp_pct[curve][percent_index] / 100;
+    return (float) vel / 100.0f;
 }
 
 /* --------------------------------------------------------------------------
@@ -439,10 +422,15 @@ static void slewing_loop(void) {
     uint32_t dec_period = MAX_STEP_PERIOD_US;
 
     /*
+     * Precompute total distances in centidegrees — constant for the
+     * duration of a slew (only changes after preemption, at which point
+     * we return and re-enter).
+     */
+    int distance_ra = (int) (fabsf(s_motion.ra_target - s_motion.ra_start) * 100.0f);
+    int distance_dec = (int) (fabsf(s_motion.dec_target - s_motion.dec_start) * 100.0f);
+
+    /*
      * Cache microstep resolution — sourced from TMC driver at loop entry.
-     * Does not change during motion (hardware constant), so calling
-     * motors_get_deg_per_microstep() once is safe and avoids 3 calls
-     * per iteration (~27,000 calls/s during fast slewing).
      */
     float deg_per_step = motors_get_deg_per_microstep();
     float half_step = deg_per_step * 0.5f;
@@ -490,9 +478,11 @@ static void slewing_loop(void) {
                     next_ra_us = esp_timer_get_time();
                     next_dec_us = next_ra_us;
                     last_ramp_recalc_us = 0;
-                    /* Refresh cached resolution after command switch. */
+                    /* Refresh cached values after command switch. */
                     deg_per_step = motors_get_deg_per_microstep();
                     half_step = deg_per_step * 0.5f;
+                    distance_ra = (int) (fabsf(s_motion.ra_target - s_motion.ra_start) * 100.0f);
+                    distance_dec = (int) (fabsf(s_motion.dec_target - s_motion.dec_start) * 100.0f);
                     continue;
                 }
             }
@@ -502,14 +492,17 @@ static void slewing_loop(void) {
 
         /* 3. Recalculate ramped velocities (throttled to every ~5 ms). */
         if (now - last_ramp_recalc_us > 5000) {
-            float rv = ramped_velocity(motors_state.ra_velocity,
-                                       motors_state.ra_position,
-                                       s_motion.ra_start, s_motion.ra_target);
-            float dv = ramped_velocity(motors_state.dec_velocity,
-                                       motors_state.dec_position,
-                                       s_motion.dec_start, s_motion.dec_target);
-            ra_period = step_period_us(rv);
-            dec_period = step_period_us(dv);
+            int target_vel_ra = (int) (motors_state.ra_velocity * 100.0f);
+            int target_vel_dec = (int) (motors_state.dec_velocity * 100.0f);
+            int position_ra = (int) (motors_state.ra_position * 100.0f);
+            int position_dec = (int) (motors_state.dec_position * 100.0f);
+
+            float ra_vel = ramp_velocity(target_vel_ra, position_ra,
+                                         (int) (s_motion.ra_start * 100.0f), distance_ra);
+            float dec_vel = ramp_velocity(target_vel_dec, position_dec,
+                                          (int) (s_motion.dec_start * 100.0f), distance_dec);
+            ra_period = step_period_us(ra_vel);
+            dec_period = step_period_us(dec_vel);
             last_ramp_recalc_us = now;
         }
 
@@ -574,7 +567,7 @@ static void slewing_loop(void) {
                             break; /* exit fine-wait, re-enter outer loop */
                         }
                     }
-                    taskYIELD();  /* reset task WDT, let other tasks run */
+                    taskYIELD(); /* reset task WDT, let other tasks run */
                 }
             }
         } else if (wait_us > 100) {
@@ -772,7 +765,7 @@ static void tracking_loop(void) {
                         break; /* exit fine-wait, re-enter outer loop */
                     }
                 }
-                taskYIELD();  /* reset task WDT, let other tasks run */
+                taskYIELD(); /* reset task WDT, let other tasks run */
             }
         }
     }

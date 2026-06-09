@@ -9,6 +9,7 @@
 #include "nvs_flash.h"
 
 #include "buttons.h"
+#include "led.h"
 #include "motors.h"
 #include "mount.h"
 #include "network.h"
@@ -34,6 +35,8 @@ void setup_init(void) {
     network_start();
 
     buttons_init();
+
+    led_init();
 
     mount_init();
 

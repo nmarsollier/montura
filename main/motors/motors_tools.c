@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 /*
  * Status string helpers live here so the motors module remains the canonical

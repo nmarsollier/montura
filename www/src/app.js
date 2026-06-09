@@ -12,6 +12,8 @@ function mountApp() {
         goto: {ra: {h: 0, m: 0, s: 0}, dec: {d: 0, m: 0, s: 0}, speed: 4},
         serverTracking: 'none',
         wifiAp: false,
+        isHome: false,
+        isParked: false,
         selectedTracking: null,
         trackingOptions: ['none', 'sidereal', 'lunar', 'solar'],
 
@@ -44,6 +46,8 @@ function mountApp() {
                 this.mountTime = j.time || '--';
                 this.serverTracking = j.tracking || 'none';
                 this.wifiAp = j.wifi_ap || false;
+                this.isHome = j.is_home || false;
+                this.isParked = (j.status === 'PARKED');
 
                 const s = j.settings;
                 if (s) {

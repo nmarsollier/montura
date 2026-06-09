@@ -2,7 +2,7 @@
  *
  * Purpose: string manipulation helpers.
  */
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 #include <stdio.h>
 #include <string.h>

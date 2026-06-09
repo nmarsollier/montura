@@ -8,7 +8,7 @@
 
 #include "esp_err.h"
 #include "network/network.h"
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 /*
  * Business use case: allow clients to configure home Wi-Fi credentials.

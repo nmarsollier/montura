@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include "mount.h"
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 /*
  * Business use case: expose SYNC via the API for remote recalibration.

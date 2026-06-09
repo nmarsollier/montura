@@ -2,7 +2,7 @@
  *
  * Purpose: numeric conversion helpers.
  */
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 #include <string.h>
 

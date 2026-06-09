@@ -5,7 +5,7 @@
 
 #include "mount.h"
 
-#include "tools/tools.h"
+#include "utils/utils.h"
 #include "network/network.h"
 
 /*
@@ -24,6 +24,10 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
 
+    bool is_home = (data.status == MOUNT_STATUS_READY
+                    && data.ra.hours == 0 && data.ra.minutes == 0
+                    && data.dec.degrees == 0 && data.dec.minutes == 0);
+
     static const char format[] =
             "{"
             "\"status\":\"%s\","
@@ -36,7 +40,8 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
             "\"lon\":%.6f,"
             "\"elevation\":%d"
             "},"
-            "\"wifi_ap\":%s"
+            "\"wifi_ap\":%s,"
+            "\"is_home\":%s"
             "}";
 
     const char *status = status_to_string(data.status);
@@ -55,7 +60,8 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
              dec_sign, data.dec.degrees, data.dec.minutes, data.dec.seconds,
              time_buf,
              data.settings.lat, data.settings.lon, data.settings.elevation,
-             wifi_ap ? "true" : "false");
+             wifi_ap ? "true" : "false",
+             is_home ? "true" : "false");
 
     http_response_json(request, response);
 

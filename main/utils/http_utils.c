@@ -2,7 +2,7 @@
  *
  * Purpose: send HTTP responses from REST handlers.
  */
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 #include <stdio.h>
 #include <string.h>

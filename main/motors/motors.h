@@ -51,9 +51,6 @@ typedef struct {
     float ra_velocity;
     /* Current commanded/measured DEC axis angular velocity (deg/s). */
     float dec_velocity;
-    /* Current commanded motor step rates derived from velocities (steps/s). */
-    float ra_steps_per_s;
-    float dec_steps_per_s;
 
     /* Operational limits enforced by the motors module. */
     struct {

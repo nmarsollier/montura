@@ -5,7 +5,7 @@
 
 #include "mount.h"
 
-#include "tools/tools.h"
+#include "utils/utils.h"
 
 /*
  * Business use case: expose MOVE-AXIS via the API with input validation.

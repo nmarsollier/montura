@@ -3,7 +3,7 @@
  * Purpose: create the REST API HTTP server on port 80.
  */
 #include "rest.h"
-#include "tools.h"
+#include "utils.h"
 
 #include "esp_http_server.h"
 #include "esp_log.h"
@@ -32,7 +32,7 @@ void rest_server_start(void) {
 
     rest_register_get(server, "/api/status", rest_status_handler);
     /* Serve the embedded SPA at the root path `/`. */
-    rest_register_get(server, "/", rest_screen_handler);
+    rest_register_get(server, "/", rest_html_handler);
 
     rest_register_post(server, "/api/tracking", rest_tracking_handler);
     rest_register_post(server, "/api/move-axis", rest_move_axis_handler);

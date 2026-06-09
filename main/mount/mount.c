@@ -5,12 +5,6 @@
 #include "mount.h"
 #include "mount_internal.h"
 
-#include <stdio.h>
-#include <string.h>
-
-#include "esp_timer.h"
-#include "motors.h"
-
 MountSettings mount_internal_state;
 
 /*

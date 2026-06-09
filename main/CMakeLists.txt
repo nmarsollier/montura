@@ -5,6 +5,10 @@ idf_component_register(
         "buttons/buttons_hw.c"
         "buttons/buttons_poll.c"
 
+        "led/led_init.c"
+        "led/led_on.c"
+        "led/led_off.c"
+
         "motors/motors_button_stop.c"
         "motors/motors_current_state.c"
         "motors/motors_disable.c"
@@ -65,7 +69,7 @@ idf_component_register(
         "rest/rest_home_handler.c"
         "rest/rest_move_axis_handler.c"
         "rest/rest_park_handler.c"
-        "rest/rest_screen_handler.c"
+        "rest/rest_html_handler.c"
         "rest/rest_settings_handler.c"
         "rest/rest_status_handler.c"
         "rest/rest_stop_handler.c"
@@ -184,17 +188,18 @@ idf_component_register(
         "tmc/tmc_get_active_microsteps.c"
         "tmc/tmc_init.c"
 
-        "tools/http_utils.c"
-        "tools/json_utils.c"
-        "tools/number_utils.c"
-        "tools/rest_utils.c"
-        "tools/string_utils.c"
+        "utils/http_utils.c"
+        "utils/json_utils.c"
+        "utils/number_utils.c"
+        "utils/rest_utils.c"
+        "utils/string_utils.c"
 
         "udp_alpaca/udp_alpaca.c"
 
         INCLUDE_DIRS
         "."
         "alpaca_bridge"
+        "led"
         "mount"
         "rest"
         "rest_alpaca"
@@ -202,7 +207,7 @@ idf_component_register(
         "motors_motion"
         "buttons"
         "runtime"
-        "tools"
+        "utils"
         "udp_alpaca"
         "network"
         "tmc"
