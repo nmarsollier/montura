@@ -60,7 +60,6 @@ idf_component_register(
 
         "network/network.c"
         "network/network_configure_home_wifi.c"
-        "network/network_ip.c"
         "network/network_is_setup_ap_started.c"
         "network/network_sntp.c"
 
