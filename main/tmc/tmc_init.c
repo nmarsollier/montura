@@ -118,7 +118,7 @@
  * Reference: TMC2209 datasheet, Table 8.40 (IHOLD_IRUN).
  */
 #define TMC_IHOLD      16   /* Hold current:  ~705 mA RMS */
-#define TMC_IRUN       22   /* Run current:   ~970 mA RMS */
+#define TMC_IRUN       25   /* Run current:   ~970 mA RMS */
 #define TMC_IHOLDDELAY  1   /* Standard IRUN->IHOLD delay */
 
 /*
@@ -142,7 +142,6 @@
  */
 #define GCONF_I_SCALE_ANALOG   (1U << 0)
 #define GCONF_MSTEP_REG_SELECT (1U << 7)
-
 
 static const char *TAG = "TMC_INIT";
 
@@ -503,7 +502,6 @@ static void tmc_log_current_status(const TmcAxis *axis) {
     ESP_LOGI(TAG, "=============================================");
 }
 
-
 esp_err_t tmc2209_hw_init(void) {
     uart_config_t config = {
         .baud_rate = TMC_BAUD_RATE,
@@ -541,7 +539,6 @@ esp_err_t tmc2209_hw_init(void) {
      * driving it.
      */
     gpio_set_pull_mode(TMC_UART_RX_GPIO, GPIO_PULLUP_ONLY);
-
 
     // Initialisation loop for RA and DEC axes
     for (size_t i = 0; i < sizeof(tmc_axes) / sizeof(tmc_axes[0]); i++) {
