@@ -13,12 +13,11 @@
  * ═══════════════════════════════════════════════════════════════ */
 
 typedef struct {
-    float target_ra;         /* Target right ascension (hours) */
-    float target_dec;        /* Target declination (degrees) */
-    int side_of_pier;        /* 0 = East, 1 = West */
-    int slew_settle_time;    /* Settle time after slew (seconds) */
-    float park_ra_deg;       /* Park position — RA axis (degrees) */
-    float park_dec_deg;      /* Park position — DEC axis (degrees) */
+    float target_ra; /* Target right ascension (hours) */
+    float target_dec; /* Target declination (degrees) */
+    int slew_settle_time; /* Settle time after slew (seconds) */
+    float park_ra_deg; /* Park position — RA axis (degrees) */
+    float park_dec_deg; /* Park position — DEC axis (degrees) */
 } AlpacaBridgeState;
 
 extern AlpacaBridgeState alpaca_bridge_state;

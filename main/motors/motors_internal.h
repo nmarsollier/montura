@@ -39,9 +39,6 @@ typedef struct {
 /* Queue handle — created by motors_init(), shared across the module. */
 extern QueueHandle_t motion_cmd_queue;
 
-/* Priority lookup (0 = highest). */
-int motors_queue_priority(MotionCommandType type);
-
 /* Send a MotionCommand to the back of the queue (FIFO). */
 void motors_queue_send(MotionCommand *cmd);
 
@@ -64,15 +61,12 @@ bool motors_is_valid_dec(float value);
 /*
  * Motion calibration factor.
  *
- * Compensates for discrepancies between configured and actual step resolution.
- * When commanding 180° results in 90° physical movement, the factor is 2.0.
- *
- * Adjust this value until commanded angles match physical movement:
+ * Compensates for discrepancies between configured and actual step
+ * resolution.  Adjust until commanded angle equals physical movement:
  *   - Mount moves too little → increase the factor
  *   - Mount moves too much   → decrease the factor
  *
- * Formula: factor = commanded_angle / actual_angle
- * Example:  2.0 = 180° / 90°
+ * factor = commanded_angle / actual_angle
  */
 #define MOTION_CALIBRATION_FACTOR 1.0f
 
@@ -89,8 +83,7 @@ bool motors_is_valid_dec(float value);
 /*
  * Get the active microstep count from the TMC2209 driver.
  * Reads the cached value verified against hardware registers during init.
- *
- * @return Microstep count (e.g. 128), or 128 as fallback if TMC not ready.
+ * Falls back to the compile-time default if the TMC is not yet initialised.
  */
 static inline uint16_t motors_get_microsteps(void) {
     extern uint16_t tmc2209_get_active_microsteps(void);
@@ -100,11 +93,8 @@ static inline uint16_t motors_get_microsteps(void) {
 
 /*
  * Angular displacement per microstep at the mount axis.
- * Computed at runtime using the TMC-verified microstep count.
- *
- * Formula: 360° / (200 full-steps × microsteps × (80/20) × calibration)
- *
- * With 128 µsteps and calibration 1.0: 360 / 102,400 = 0.003515625°
+ * Computed at runtime from the TMC-verified microstep count,
+ * gear ratio, and calibration factor — no hardcoded step size.
  */
 static inline float motors_get_deg_per_microstep(void) {
     return 360.0f / ((float) MOTOR_FULL_STEPS_PER_REV *
@@ -140,6 +130,6 @@ void motors_hw_step_dec(void);
  * Task & queue lifecycle (motors_task.c, motors_queue.c).
  * ========================================================================= */
 
-void motors_motion_task_start(void);
+void motors_motion_task_init(void);
 
-void motors_queue_create(void);
+void motors_queue_init(void);

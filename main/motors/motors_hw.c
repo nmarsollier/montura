@@ -2,20 +2,12 @@
  *
  * Purpose: TMC2209 STEP/DIR GPIO control.
  *
- * Hardware configuration:
- *   - Driver: TMC2209 in STEP/DIR mode with UART configuration
- *   - Motor: NEMA 17 (200 full steps/rev, 1.8°/step)
- *   - Microsteps: 128 (configured via UART, with hardware interpolation enabled)
- *   - Gear ratio: 20/80 (4:1)
- *   - Processor: ESP32 (240 MHz)
+ * Hardware: NEMA 17 stepper motors driven by TMC2209 in STEP/DIR mode
+ * with UART-configured microstepping and hardware interpolation.
+ * Gear reduction: MOTOR_PULLEY_TEETH:AXIS_PULLEY_TEETH (see motors_internal.h).
  *
- * STEP pulse timing:
- *   - TMC2209 minimum STEP high time: ~100 ns (datasheet)
- *   - Using 2 µs high + 2 µs low for reliable operation at high speeds
- *   - Effective steps/rev = 200 × 128 × 4 × MOTION_CALIBRATION_FACTOR
- *     With calibration 1.0: 102,400 steps/rev
- *   - Max speed (32 °/s) = 32/360 × 102,400 ≈ 9,100 steps/s → period ~110 µs
- *   - Pulse (4 µs) = ~14.5 % duty cycle — within TMC2209 spec
+ * STEP pulse width is set above the TMC2209 minimum (~100 ns) with
+ * margin for GPIO slew rate, keeping duty cycle low at max slew speed.
  */
 
 #include "esp_log.h"
@@ -32,11 +24,9 @@
 #define DEC_DIR_GPIO  GPIO_NUM_32
 
 /*
- * STEP pulse timing.
- * TMC2209 requires minimum ~100 ns high time.
- * We use 2 µs to safely accommodate GPIO overhead and provide
- * a clean pulse for both slow (tracking) and fast (slewing) rates.
- * Total pulse = HIGH_US + LOW_US.
+ * STEP pulse width — set above TMC2209 minimum to absorb GPIO overhead.
+ * HIGH_US + LOW_US = total pulse; must remain a small fraction of the
+ * shortest step period at max slew speed.
  */
 #define STEP_PULSE_HIGH_US 2
 #define STEP_PULSE_LOW_US  2
@@ -110,12 +100,8 @@ void motors_hw_set_direction_dec(MotorDirection direction) {
 
 /*
  * Generate a STEP pulse on the RA axis.
- * Pulse width is optimized for the TMC2209:
- *   - 2 µs high (well above 100 ns minimum)
- *   - 2 µs low  (ready for next step)
- *
- * At max slew (32 °/s = ~18,200 steps/s = 55 µs period),
- * the 4 µs pulse uses ~7% duty cycle — well within spec.
+ * Pulse width = STEP_PULSE_HIGH_US + STEP_PULSE_LOW_US.
+ * Duty cycle stays low at max slew speed; well within TMC2209 spec.
  */
 void motors_hw_step_ra() {
     gpio_set_level(RA_STEP_GPIO, 1);

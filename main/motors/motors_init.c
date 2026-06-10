@@ -6,12 +6,8 @@
 #include "motors_internal.h"
 
 /*
- * Default motors state.
- *
- * Positions are expressed in degrees.
- *   RA  -120..+120  (home = meridian; physical tripod collision risk beyond)
- *   DEC -180..+180  (home = south celestial pole; cable wrap prevention)
- * The initial value is 0.0, which represents the home/alignment reference.
+ * Default motors state — positions in degrees, home = alignment reference.
+ * Axis limits are configured via .limits (see MotorsState).
  */
 MotorsState motors_state = {
     .ra_position = 0.0f,
@@ -21,15 +17,15 @@ MotorsState motors_state = {
     .ra_velocity = 0.0f,
     .dec_velocity = 0.0f,
     .limits = {
-        .ra_min = -120.0f,
-        .ra_max = 120.0f,
-        .dec_min = -180.0f,
-        .dec_max = 180.0f,
+        .ra_min = -100.0f,
+        .ra_max = 100.0f,
+        .dec_min = -150.0f,
+        .dec_max = 150.0f,
     },
 };
 
 void motors_init(void) {
     motors_hw_init();
-    motors_queue_create();
-    motors_motion_task_start();
+    motors_queue_init();
+    motors_motion_task_init();
 }

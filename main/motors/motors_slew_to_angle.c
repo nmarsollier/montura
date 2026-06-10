@@ -14,7 +14,14 @@
 
 static const char *TAG = "MOTORS_SLEW_TO_ANGLE";
 
-MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed) {
+MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed, float lat) {
+    TrackingMode currTracking = TRACKING_NONE;
+    if (motors_state.status == MOTORS_STATUS_TRACKING
+        && motors_state.tracking != TRACKING_NONE) {
+        currTracking = motors_state.tracking;
+        motors_stop();
+    }
+
     float actual_speed = motors_get_slewing_speed((int) speed);
 
     if (!motors_is_valid_ra(degrees)) {
@@ -32,10 +39,21 @@ MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed) {
     };
     motors_queue_send(&cmd);
 
+    if (currTracking != TRACKING_NONE) {
+        motors_start_tracking(currTracking, lat);
+    }
+
     return MOTOR_OK;
 }
 
-MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed) {
+MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed, float lat) {
+    TrackingMode currTracking = TRACKING_NONE;
+    if (motors_state.status == MOTORS_STATUS_TRACKING
+        && motors_state.tracking != TRACKING_NONE) {
+        currTracking = motors_state.tracking;
+        motors_stop();
+    }
+
     float actual_speed = motors_get_slewing_speed((int) speed);
 
     if (!motors_is_valid_dec(degrees)) {
@@ -52,6 +70,10 @@ MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed) {
         .dec_velocity = actual_speed,
     };
     motors_queue_send(&cmd);
+
+    if (currTracking != TRACKING_NONE) {
+        motors_start_tracking(currTracking, lat);
+    }
 
     return MOTOR_OK;
 }

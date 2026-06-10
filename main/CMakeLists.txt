@@ -82,6 +82,7 @@ idf_component_register(
         "alpaca_bridge/alpaca_bridge_altitude.c"
         "alpaca_bridge/alpaca_bridge_mount_state.c"
         "alpaca_bridge/alpaca_bridge_pier_side.c"
+        "alpaca_bridge/alpaca_bridge_destination_pier.c"
         "alpaca_bridge/alpaca_bridge_set_park.c"
         "alpaca_bridge/alpaca_bridge_settle_time.c"
         "alpaca_bridge/alpaca_bridge_sidereal_time.c"

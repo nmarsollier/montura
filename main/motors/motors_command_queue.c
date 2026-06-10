@@ -1,9 +1,7 @@
-/* Motors - motors_queue.c
+/* Motors - motors_command_queue.c
  *
- * Purpose: internal command-queue infrastructure for the motion task.
- *
- * Owns the FreeRTOS queue handle, priority lookup, queue lifecycle,
- * and the shared cmd_send helper used across the motors module.
+ * Purpose: FreeRTOS command queue for the motion task.
+ * Owns the queue handle, lifecycle, send, and clear helpers.
  */
 
 #include "motors.h"
@@ -16,31 +14,14 @@
 
 static const char *TAG = "MOTORS_MOTION_CMD";
 
-/* Single queue handle shared with the motion task via motors_motion_internal.h. */
+/* Queue handle — shared across the motors module via motors_internal.h. */
 QueueHandle_t motion_cmd_queue = NULL;
 
 /* --------------------------------------------------------------------------
- * Command priority — lower number = higher preemption power.
+ * Queue lifecycle.
  * -------------------------------------------------------------------------- */
-int motors_queue_priority(MotionCommandType type) {
-    switch (type) {
-        case MOTION_CMD_STOP: return 0;
-        case MOTION_CMD_PARK: return 0;
-        case MOTION_CMD_DISABLE: return 0;
-        case MOTION_CMD_SLEW: return 1;
-        case MOTION_CMD_TRACK: return 2;
-        case MOTION_CMD_MOVE_AXIS: return 2;
-        case MOTION_CMD_ENABLE: return 2;
-        case MOTION_CMD_SYNC: return 3;
-        default: return 99;
-    }
-}
-
-/* --------------------------------------------------------------------------
- * Queue lifecycle — called from motors_motion_init().
- * -------------------------------------------------------------------------- */
-void motors_queue_create(void) {
-    motion_cmd_queue = xQueueCreate(4, sizeof(MotionCommand));
+void motors_queue_init(void) {
+    motion_cmd_queue = xQueueCreate(10, sizeof(MotionCommand));
     if (motion_cmd_queue == NULL) {
         ESP_LOGE(TAG, "Failed to create motion command queue");
     }

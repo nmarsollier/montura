@@ -84,6 +84,8 @@ MountResult alpaca_bridge_sync_to_target(void);
 /* Pier side (0=East, 1=West). */
 int alpaca_bridge_get_side_of_pier(void);
 
+int alpaca_bridge_get_destination_side_of_pier(float ra_hours, float dec_deg);
+
 MountResult alpaca_bridge_set_side_of_pier(int side);
 
 /* Slew settle time (seconds). */

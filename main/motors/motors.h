@@ -142,9 +142,9 @@ TrackingMode tracking_from_string(const char *value);
 const char *tracking_valid_values(void);
 
 /* Move a single axis to an absolute angle in degrees. */
-MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed);
+MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed, float lat);
 
-MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed);
+MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed, float lat);
 
 /* Move both axes to absolute angles in degrees. */
 MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed, float lat);

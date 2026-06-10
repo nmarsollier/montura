@@ -9,7 +9,6 @@
 AlpacaBridgeState alpaca_bridge_state = {
     .target_ra = 0.0f,
     .target_dec = 0.0f,
-    .side_of_pier = 0,
     .slew_settle_time = 0,
     .park_ra_deg = 0.0f,
     .park_dec_deg = 90.0f,

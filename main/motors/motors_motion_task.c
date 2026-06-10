@@ -1,40 +1,18 @@
 
-/* MotorsMotion - motors_motion_task.c
+/* Motors - motors_motion_task.c
  *
- * Purpose: FreeRTOS motion task — consumes commands from the priority queue
+ * Purpose: FreeRTOS motion task — consumes MotionCommands from the queue
  * and advances axis positions one microstep at a time at the frequency
  * required to achieve the commanded angular velocity.
  *
- * The motion task is the SINGLE WRITER of motors_state position fields,
- * guaranteeing thread-safe position updates. Status transitions are also
- * performed here for commands that change operational state.
+ * The motion task is the SINGLE WRITER of motors_state position,
+ * status, and tracking fields — all other code only reads them.
  *
- * Microstep resolution is sourced from the TMC2209 driver at runtime via
- * motors_get_deg_per_microstep(), ensuring it always matches hardware.
- *
- * Hardware: TMC2209 STEP/DIR GPIO control
- * Motor: NEMA 17 (200 full steps/rev, 1.8 deg/step)
- * Gear ratio: 20/80 (4:1) motor-to-axis
- *
- * Timing strategies (dual-path, dispatched by motion type):
- *
- *   SLEWING PATH (slewing_loop):
- *     - SLOW: step period > 20ms -> vTaskDelay yields CPU
- *     - FAST: step period <= 20ms -> busy-wait with esp_timer,
- *       checking the command queue every ~512 us for preemption
- *     - Ramped acceleration / deceleration for mechanical smoothness.
- *     - Uses incremental scheduling (next += period) — acceptable because
- *       slews are distance-bounded and short-lived.
- *
- *   TRACKING PATH (tracking_loop):
- *     - Absolute-time fractional accumulator: accumulates dt / period_us
- *       each iteration, emits floor(accumulator) steps, wraps the remainder.
- *     - Timing reference is esp_timer_get_time() — zero cumulative error
- *       over arbitrarily long tracking sessions.
- *     - No ramping (tracking velocities are constant and very low).
+ * Two execution paths, dispatched by command type:
+ *   slewing_loop  — distance-bounded, ramped accel/decel, incremental scheduling
+ *   tracking_loop — open-ended, constant velocity, absolute-time accumulator
  */
 
-#include "motors_internal.h"
 #include "motors_internal.h"
 
 #include <math.h>
@@ -45,23 +23,21 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
-/* Stack size for the motion task (words).  Bumped from 2048 to 4096
- * after observing a stray _invalid_pc_placeholder crash — a stack
- * overflow in the motion task would produce exactly that symptom
- * (the slewing_loop has deep call chains through step + condition
- * helpers and FreeRTOS queue operations). */
+/*
+ * Task stack size — sized to accommodate deep call chains through step
+ * helpers, condition checks, and FreeRTOS queue operations.
+ */
 #define MOTION_TASK_STACK_WORDS 4096
 #define MOTION_TASK_PRIORITY    5
 
-/* Step period upper bound (us) used when velocity is zero or unknown. */
-#define MAX_STEP_PERIOD_US (10 * 1000 * 1000) /* 10 seconds */
+/* Step period ceiling — used when velocity is zero or unknown. */
+#define MAX_STEP_PERIOD_US (10 * 1000 * 1000)
 
 /*
- * Threshold for slewing vs tracking mode switching.
- * When step period > 20ms, use the efficient task-delay approach.
- * When step period <= 20ms, use busy-wait with esp_timer for precision.
+ * Above this step period vTaskDelay yields the CPU; at or below it
+ * a busy-wait with esp_timer keeps microsecond precision.
  */
-#define BUSYWAIT_THRESHOLD_US 20000 /* 20 ms */
+#define BUSYWAIT_THRESHOLD_US 20000
 
 static TaskHandle_t s_motion_task_handle = NULL;
 
@@ -82,27 +58,24 @@ static struct {
  * -------------------------------------------------------------------------- */
 
 /*
- * Minimum slew velocity in centidegrees/second (80 = 0.80 °/s).
+ * Minimum slew velocity in centidegrees/second — floor for ramp curves.
  */
 #define MIN_SLEW_CDS 80
 
-/* Distance thresholds in centidegrees. */
-#define SHORT_SLEW_CDS   200   /*   2° — constant slow speed */
-#define GENTLE_SLEW_CDS  800   /*   8° — cap target speed    */
-#define FAST_SLEW_CDS   3500   /*  35° — aggressive profile  */
+/* Distance thresholds in centidegrees for ramp-profile selection. */
+#define SHORT_SLEW_CDS   200   /* constant slow speed below this */
+#define GENTLE_SLEW_CDS  800   /* cap target speed below this    */
+#define FAST_SLEW_CDS   3500   /* aggressive profile above this  */
 
 /*
- * Velocity profiles — 2 rows × 100 columns.
+ * Velocity profiles — 2 rows × 100 columns, each value is the
+ * percentage of (target_vel − MIN_SLEW_CDS) added on top of the floor.
  *
- * Row 0:  < 35°  — 30 % linear accel, 40 % cruise, 30 % linear decel.
- * Row 1:  ≥ 35°  — 10 % quadratic accel, 60 % cruise, 30 % linear decel.
- *
- * Each value is the percentage of (target_vel − MIN_SLEW_VEL) to add
- * on top of MIN_SLEW_VEL at that point.
+ * Row 0 — gentle  (30 % linear accel, 40 % cruise, 30 % linear decel)
+ * Row 1 — aggressive (10 % quadratic accel, 60 % cruise, 30 % linear decel)
  */
 static const uint8_t VELOCITY_CURVE[2][100] = {
-    {
-        /* < 35°: 30 % linear accel, 40 % cruise, 30 % linear decel */
+    {   /* Row 0 — gentle profile */
         0, 3, 7, 10, 14, 17, 21, 24, 28, 31,
         34, 38, 41, 45, 48, 52, 55, 59, 62, 66,
         69, 72, 76, 79, 83, 86, 90, 93, 97, 100,
@@ -114,8 +87,7 @@ static const uint8_t VELOCITY_CURVE[2][100] = {
         66, 62, 59, 55, 52, 48, 45, 41, 38, 34,
         31, 28, 24, 21, 17, 14, 10, 7, 3, 0,
     },
-    {
-        /* ≥ 35°: 10 % quadratic accel, 60 % cruise, 30 % linear decel */
+    {   /* Row 1 — aggressive profile */
         0, 1, 5, 11, 20, 31, 44, 60, 79, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -245,6 +217,15 @@ static bool step_axis_dec(float target_deg, float deg_per_step) {
     motors_hw_step_dec();
     motors_state.dec_position = next_position;
     return true;
+}
+
+/* --------------------------------------------------------------------------
+ * Only STOP / PARK / DISABLE may interrupt a running motion loop.
+ * -------------------------------------------------------------------------- */
+static bool is_terminal_command(MotionCommandType type) {
+    return type == MOTION_CMD_STOP
+           || type == MOTION_CMD_PARK
+           || type == MOTION_CMD_DISABLE;
 }
 
 /* --------------------------------------------------------------------------
@@ -480,10 +461,7 @@ static void slewing_loop(void) {
              * when we're actually going to process the command.
              */
             if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
-                int incoming_prio = motors_queue_priority(cmd.type);
-                int current_prio = motors_queue_priority(s_motion.active_cmd_type);
-
-                if (incoming_prio < current_prio) {
+                if (is_terminal_command(cmd.type)) {
                     xQueueReceive(motion_cmd_queue, &cmd, 0);
                     process_command(cmd);
                     if (!s_motion.motion_active) return;
@@ -542,47 +520,17 @@ static void slewing_loop(void) {
 
         if (wait_us > BUSYWAIT_THRESHOLD_US) {
             /*
-             * SLOW mode (tracking / slow slews).
-             *
-             * FreeRTOS vTaskDelay has ±10 ms jitter at the 100 Hz tick rate.
-             * For sidereal tracking (~210 ms period) this would introduce
-             * ~5 % period jitter — visible as periodic error in long exposures.
-             *
-             * Strategy: sleep via vTaskDelay until ~2 ms before the step,
-             * then fine-wait the remainder with busy-wait for µs precision.
-             * Command queue is checked during the fine-wait window.
+             * SLOW — step period > 20 ms.
+             * Slews are distance-bounded so per-step jitter is harmless:
+             * the ramp recalc compensates on the next iteration.
              */
-            int64_t fine_margin_us = 2000; /* 2 ms fine-wait window */
+            uint32_t sleep_ms = (wait_us / 1000 > 50) ? 50 : (uint32_t) (wait_us / 1000);
+            if (sleep_ms < 1) sleep_ms = 1;
+            vTaskDelay(pdMS_TO_TICKS(sleep_ms));
+            continue;
+        }
 
-            if (wait_us > fine_margin_us) {
-                int64_t sleep_us = wait_us - fine_margin_us;
-                /* Cap at 50 ms to poll the command queue regularly. */
-                uint32_t sleep_ms = (sleep_us / 1000 > 50) ? 50 : (uint32_t) (sleep_us / 1000);
-                if (sleep_ms < 1) sleep_ms = 1;
-                vTaskDelay(pdMS_TO_TICKS(sleep_ms));
-            }
-
-            /* Fine-wait: busy-wait the remaining margin for precise step timing.
-             * Poll the command queue every ~512 us for preemption commands. */
-            while (esp_timer_get_time() < next_step) {
-                if ((esp_timer_get_time() & 0x1FF) == 0) {
-                    MotionCommand preempt_cmd;
-                    if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                        if (motors_queue_priority(preempt_cmd.type) <
-                            motors_queue_priority(s_motion.active_cmd_type)) {
-                            xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
-                            process_command(preempt_cmd);
-                            if (!s_motion.motion_active) return;
-                            next_ra_us = esp_timer_get_time();
-                            next_dec_us = next_ra_us;
-                            last_ramp_recalc_us = 0;
-                            break; /* exit fine-wait, re-enter outer loop */
-                        }
-                    }
-                    taskYIELD(); /* reset task WDT, let other tasks run */
-                }
-            }
-        } else if (wait_us > 100) {
+        if (wait_us > 100) {
             /*
              * FAST mode: busy-wait with periodic queue checks and yields.
              * Poll queue and yield every ~512 us to keep the scheduler alive.
@@ -591,8 +539,7 @@ static void slewing_loop(void) {
                 if ((esp_timer_get_time() & 0x1FF) == 0) {
                     MotionCommand preempt_cmd;
                     if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                        if (motors_queue_priority(preempt_cmd.type) <
-                            motors_queue_priority(s_motion.active_cmd_type)) {
+                        if (is_terminal_command(preempt_cmd.type)) {
                             xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
@@ -671,10 +618,7 @@ static void tracking_loop(void) {
 
             MotionCommand cmd;
             if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
-                int incoming_prio = motors_queue_priority(cmd.type);
-                int current_prio = motors_queue_priority(s_motion.active_cmd_type);
-
-                if (incoming_prio < current_prio) {
+                if (is_terminal_command(cmd.type)) {
                     xQueueReceive(motion_cmd_queue, &cmd, 0);
                     process_command(cmd);
                     if (!s_motion.motion_active) return;
@@ -762,8 +706,7 @@ static void tracking_loop(void) {
             if ((esp_timer_get_time() & 0x1FF) == 0) {
                 MotionCommand preempt_cmd;
                 if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                    if (motors_queue_priority(preempt_cmd.type) <
-                        motors_queue_priority(s_motion.active_cmd_type)) {
+                    if (is_terminal_command(preempt_cmd.type)) {
                         xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                         process_command(preempt_cmd);
                         if (!s_motion.motion_active) return;
@@ -830,7 +773,7 @@ static void motors_motion_task_run(void *arg) {
  * Public API
  * -------------------------------------------------------------------------- */
 
-void motors_motion_task_start(void) {
+void motors_motion_task_init(void) {
     xTaskCreate(
         motors_motion_task_run,
         "motors_motion",

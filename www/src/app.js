@@ -21,7 +21,9 @@ function mountApp() {
         showError(msg) {
             this.errorMessage = msg;
             if (this.errorTimer) clearTimeout(this.errorTimer);
-            this.errorTimer = setTimeout(() => { this.errorMessage = ''; }, 5000);
+            this.errorTimer = setTimeout(() => {
+                this.errorMessage = '';
+            }, 5000);
         },
 
         /* Helper: POST JSON, parse response, show errors automatically. */
@@ -65,13 +67,22 @@ function mountApp() {
                     const idx = this.trackingOptions.indexOf(j.tracking);
                     this.selectedTracking = idx >= 0 ? idx : 0;
                 }
-            }).catch(() => {});
+            }).catch(() => {
+            });
         },
 
-        stop()   { this.apiPost('/api/stop').then(() => this.fetchStatus()); },
-        home()   { this.apiPost('/api/home').then(() => this.fetchStatus()); },
-        park()   { this.apiPost('/api/park').then(() => this.fetchStatus()); },
-        unpark() { this.apiPost('/api/unpark').then(() => this.fetchStatus()); },
+        stop() {
+            this.apiPost('/api/stop').then(() => this.fetchStatus());
+        },
+        home() {
+            this.apiPost('/api/home').then(() => this.fetchStatus());
+        },
+        park() {
+            this.apiPost('/api/park').then(() => this.fetchStatus());
+        },
+        unpark() {
+            this.apiPost('/api/unpark').then(() => this.fetchStatus());
+        },
 
         setTracking() {
             this.apiPost('/api/tracking', {tracking: this.trackingOptions[this.selectedTracking]})
@@ -80,7 +91,7 @@ function mountApp() {
 
         doSlew(axis, dir) {
             const axisName = axis === 'ra' ? 'ra' : 'dec';
-            const deg = Math.min(90, Math.max(1, Math.round(Math.abs(this.slew.degrees || 5))));
+            const deg = Math.min(180, Math.max(1, Math.round(Math.abs(this.slew.degrees || 5))));
             const spd = this.slew.speed || 4;
             this.apiPost('/api/move-axis', {axis: axisName, degrees: dir * deg, speed: spd})
                 .then(() => this.fetchStatus());
@@ -98,8 +109,8 @@ function mountApp() {
                 this.showError('RA inválida — H: 0–23, M: 0–59, S: 0–59.999');
                 return;
             }
-            if (isNaN(dd) || dd < -90 || dd > 90 || isNaN(dm) || dm < 0 || dm > 59 || isNaN(ds) || ds < 0 || ds >= 60) {
-                this.showError('DEC inválida — D: −90…+90, M: 0–59, S: 0–59.999');
+            if (isNaN(dd) || dd < -180 || dd > 180 || isNaN(dm) || dm < 0 || dm > 59 || isNaN(ds) || ds < 0 || ds >= 60) {
+                this.showError('DEC inválida — D: −180…+180, M: 0–59, S: 0–59.999');
                 return;
             }
 

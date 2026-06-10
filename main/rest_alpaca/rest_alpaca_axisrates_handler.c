@@ -11,8 +11,8 @@ esp_err_t alpaca_axisrates_handler(httpd_req_t *req) {
     uint32_t cid = alpaca_get_client_id(req);
     uint32_t stx = alpaca_next_server_tx();
     alpaca_response_value(req,
-                          "[{\"Minimum\":0.004178,\"Maximum\":32.0},"
-                          "{\"Minimum\":0.004178,\"Maximum\":32.0}]",
+                          "[{\"Minimum\":1,\"Maximum\":4},"
+                          "{\"Minimum\":1,\"Maximum\":4}]",
                           cid, stx);
     return ESP_OK;
 }

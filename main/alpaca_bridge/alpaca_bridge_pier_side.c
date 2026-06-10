@@ -1,23 +1,25 @@
 /* Alpaca bridge — pier side
  *
- * ASCOM convention: 0 = pierEast (telescope on east side of pier,
- * pointing west), 1 = pierWest.  Stored in AlpacaBridgeState — purely
- * informational for clients, the mount does not use it internally.
+ * ASCOM convention: 0 = pierEast, 1 = pierWest.
+ *
+ * Detection: equatorial_to_axis() in mount_coordinate_tools.c produces
+ *   - Normal (no flip):  dec_axis =  DEC + 90°  →  dec_axis ∈ [0°, 180°]
+ *   - Flipped (pier flip): dec_axis = -(DEC + 90°)  →  dec_axis ∈ [-180°, 0°)
+ *
+ * So the sign of the current DEC axis position directly encodes
+ * whether the mount flipped — no ambiguous RA-normalisation logic.
  */
 
 #include "alpaca_bridge.h"
-#include "alpaca_bridge_internal.h"
 
 #include "mount.h"
-#include "mount_internal.h"
 
 int alpaca_bridge_get_side_of_pier(void) {
-    return alpaca_bridge_state.side_of_pier;
+    MotorsState s = motors_current_state();
+    return (s.dec_position >= 0.0f) ? 0   /* pierEast */
+                                    : 1;  /* pierWest */
 }
 
 MountResult alpaca_bridge_set_side_of_pier(int side) {
-    if (side != 0 && side != 1)
-        return mount_result_error("Invalid pier side");
-    alpaca_bridge_state.side_of_pier = side;
-    return mount_result_ok();
+    return (MountResult){.ok = true, .message = ""};
 }
