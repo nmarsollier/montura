@@ -8,6 +8,6 @@
 #include "motors.h"
 
 MountResult mount_home(void) {
-    motors_home();
+    motors_home(mount_internal_state.lat);
     return mount_result_ok();
 }

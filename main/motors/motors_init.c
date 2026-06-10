@@ -1,10 +1,9 @@
 /* Motors - motors_init.c
  *
- * Purpose: initialize the motors module and its default state.
+ * Purpose: initialize the motors module — state, hardware, queue, and motion task.
  */
 #include "motors.h"
-
-#include "motors_motion.h"
+#include "motors_internal.h"
 
 /*
  * Default motors state.
@@ -17,7 +16,7 @@
 MotorsState motors_state = {
     .ra_position = 0.0f,
     .dec_position = 0.0f,
-    .status = MOUNT_STATUS_READY,
+    .status = MOTORS_STATUS_READY,
     .tracking = TRACKING_NONE,
     .ra_velocity = 0.0f,
     .dec_velocity = 0.0f,
@@ -30,6 +29,7 @@ MotorsState motors_state = {
 };
 
 void motors_init(void) {
-    /* Keep this entry point for future hardware initialization. */
-    motors_motion_init();
+    motors_hw_init();
+    motors_queue_create();
+    motors_motion_task_start();
 }

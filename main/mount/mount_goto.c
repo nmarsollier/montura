@@ -14,9 +14,8 @@ MountResult mount_goto(float ra, float dec, int speed) {
     };
 
     AxisCoordinates axis = equatorial_to_axis(eq);
-    motors_enable();
 
-    MotorResultCode rc1 = motors_slew_to_angle(axis.ra_axis_deg, axis.dec_axis_deg, speed);
+    MotorResultCode rc1 = motors_slew_to_angle(axis.ra_axis_deg, axis.dec_axis_deg, speed, mount_internal_state.lat);
 
     if (rc1 != MOTOR_OK) {
         return mount_result_error("Failed to start GOTO");

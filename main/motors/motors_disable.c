@@ -1,21 +1,22 @@
 /* Motors - motors_disable.c
  *
- * Purpose: disable motor movement via high-priority command.
+ * Purpose: disable motor drivers immediately.
+ *
+ * Kills hardware and resets the queue, then sends a single
+ * fresh DISABLE so the motion task aligns its internal state.
  */
 #include "motors.h"
-#include "motors_motion.h"
+#include "motors_internal.h"
 
-/*
- * Place the motors subsystem into a disabled state.
- */
 void motors_disable(void) {
-    motors_state.status = MOUNT_STATUS_READY;
-    motors_state.tracking = TRACKING_NONE;
-    motors_motion_stop();
+    motors_queue_clear();
 
-    motors_motion_hw_disable();
+    /* Kill hardware immediately — don't wait for the motion task. */
+    motors_hw_disable();
 
-    motors_state.status = MOUNT_STATUS_DISABLED;
-
-    motors_motion_disable();
+    MotionCommand cmd = {
+        .type = MOTION_CMD_DISABLE,
+        .tracking_mode = TRACKING_NONE,
+    };
+    motors_queue_send(&cmd);
 }

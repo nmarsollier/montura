@@ -2,10 +2,10 @@
  *
  * Purpose: poll button inputs and trigger the corresponding actions.
  *
- * STOP:  rising edge → motors_button_stop().
+ * STOP:  rising edge → buttons_handle_stop().
  * HOME:  rising edge → record timestamp (no immediate action).
  *        If held ≥ 1 s → mount_sync(0,0) fires while still held.
- *        If released < 1 s → motors_home() fires on release.
+ *        If released < 1 s → mount_home() fires on release.
  */
 #include "buttons.h"
 
@@ -36,7 +36,7 @@ void buttons_poll_inputs(void) {
 
     /* STOP: rising edge → immediate. */
     if (stop_now && !input_state.last_stop) {
-        motors_button_stop();
+        buttons_handle_stop();
         led_on(500);
     }
     input_state.last_stop = stop_now;
@@ -57,7 +57,7 @@ void buttons_poll_inputs(void) {
     } else if (!home_now && input_state.last_home) {
         /* Falling edge — short press (only if long-press didn't fire). */
         if (!input_state.home_long_fired) {
-            motors_home();
+            mount_home();
             led_on(500);
         }
     }

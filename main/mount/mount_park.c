@@ -13,7 +13,7 @@
  * Objective: leave the equipment in a safe rest state with tracking disabled.
  */
 MountResult mount_park(void) {
-    if (motors_current_state().status == MOUNT_STATUS_PARKED) {
+    if (motors_current_state().status == MOTORS_STATUS_PARKED) {
         return mount_result_ok();
     }
 

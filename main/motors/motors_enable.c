@@ -1,19 +1,18 @@
 /* Motors - motors_enable.c
  *
- * Purpose: enable motor movement via command queue.
+ * Purpose: enable motor drivers and bring the subsystem back
+ * to an operational state.
  */
 #include "motors.h"
-#include "motors_motion.h"
+#include "motors_internal.h"
 
-/*
- * Bring the motors back to an operational state.
- * Hardware enable happens immediately; the command notifies the task.
- */
 void motors_enable(void) {
-    motors_motion_hw_enable();
+    motors_hw_enable();
+    motors_queue_clear();
 
-    motors_state.status = MOUNT_STATUS_READY;
-    motors_state.tracking = TRACKING_NONE;
-
-    motors_motion_enable();
+    MotionCommand cmd = {
+        .type = MOTION_CMD_ENABLE,
+        .tracking_mode = TRACKING_NONE,
+    };
+    motors_queue_send(&cmd);
 }

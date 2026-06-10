@@ -1,4 +1,4 @@
-/* MotorsMotion - motors_motion_hw.c
+/* Motors - motors_hw.c
  *
  * Purpose: TMC2209 STEP/DIR GPIO control.
  *
@@ -22,7 +22,7 @@
 #include "driver/gpio.h"
 #include "esp_rom_sys.h"
 #include "motors.h"
-#include "motors_motion.h"
+#include "motors_internal.h"
 #include "tmc/tmc.h"
 
 #define MOTORS_ENABLE_GPIO GPIO_NUM_27
@@ -49,7 +49,7 @@
 static int last_dir_ra = -1;
 static int last_dir_dec = -1;
 
-esp_err_t motors_motion_hw_init(void) {
+esp_err_t motors_hw_init(void) {
     const uint64_t pin_mask =
             (1ULL << RA_STEP_GPIO) |
             (1ULL << RA_DIR_GPIO) |
@@ -78,21 +78,21 @@ esp_err_t motors_motion_hw_init(void) {
     last_dir_ra = 0;
     last_dir_dec = 0;
 
-    motors_motion_hw_enable();
+    motors_hw_enable();
     tmc2209_hw_init();
 
     return ESP_OK;
 }
 
-void motors_motion_hw_enable(void) {
+void motors_hw_enable(void) {
     gpio_set_level(MOTORS_ENABLE_GPIO, MOTORS_ENABLE_ACTIVE_LEVEL);
 }
 
-void motors_motion_hw_disable(void) {
+void motors_hw_disable(void) {
     gpio_set_level(MOTORS_ENABLE_GPIO, MOTORS_ENABLE_INACTIVE_LEVEL);
 }
 
-void motors_motion_hw_set_direction_ra(MotorDirection direction) {
+void motors_hw_set_direction_ra(MotorDirection direction) {
     int dir = direction == MOTOR_DIRECTION_POSITIVE ? 1 : 0;
     if (last_dir_ra != dir) {
         last_dir_ra = dir;
@@ -100,7 +100,7 @@ void motors_motion_hw_set_direction_ra(MotorDirection direction) {
     }
 }
 
-void motors_motion_hw_set_direction_dec(MotorDirection direction) {
+void motors_hw_set_direction_dec(MotorDirection direction) {
     int dir = direction == MOTOR_DIRECTION_POSITIVE ? 1 : 0;
     if (last_dir_dec != dir) {
         last_dir_dec = dir;
@@ -117,14 +117,14 @@ void motors_motion_hw_set_direction_dec(MotorDirection direction) {
  * At max slew (32 °/s = ~18,200 steps/s = 55 µs period),
  * the 4 µs pulse uses ~7% duty cycle — well within spec.
  */
-void motors_motion_hw_step_ra() {
+void motors_hw_step_ra() {
     gpio_set_level(RA_STEP_GPIO, 1);
     esp_rom_delay_us(STEP_PULSE_HIGH_US);
     gpio_set_level(RA_STEP_GPIO, 0);
     esp_rom_delay_us(STEP_PULSE_LOW_US);
 }
 
-void motors_motion_hw_step_dec() {
+void motors_hw_step_dec() {
     gpio_set_level(DEC_STEP_GPIO, 1);
     esp_rom_delay_us(STEP_PULSE_HIGH_US);
     gpio_set_level(DEC_STEP_GPIO, 0);

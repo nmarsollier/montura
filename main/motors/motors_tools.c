@@ -12,15 +12,15 @@
  */
 const char *status_to_string(MotorsStatus status) {
     switch (status) {
-        case MOUNT_STATUS_READY:
+        case MOTORS_STATUS_READY:
             return "ready";
-        case MOUNT_STATUS_TRACKING:
+        case MOTORS_STATUS_TRACKING:
             return "tracking";
-        case MOUNT_STATUS_DISABLED:
+        case MOTORS_STATUS_DISABLED:
             return "disabled";
-        case MOUNT_STATUS_SLEWING:
+        case MOTORS_STATUS_SLEWING:
             return "slewing";
-        case MOUNT_STATUS_PARKED:
+        case MOTORS_STATUS_PARKED:
             return "parked";
         default:
             return "disabled";

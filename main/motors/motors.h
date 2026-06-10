@@ -8,15 +8,15 @@
  */
 typedef enum {
     /* Ready to accept slews/tracking requests. */
-    MOUNT_STATUS_READY,
+    MOTORS_STATUS_READY,
     /* Performing a user-initiated slew or goto. */
-    MOUNT_STATUS_SLEWING,
+    MOTORS_STATUS_SLEWING,
     /* Continuous tracking is active. */
-    MOUNT_STATUS_TRACKING,
+    MOTORS_STATUS_TRACKING,
     /* Parked: mount in safe parked position. */
-    MOUNT_STATUS_PARKED,
+    MOTORS_STATUS_PARKED,
     /* Disabled: motors unavailable or disabled by user. */
-    MOUNT_STATUS_DISABLED
+    MOTORS_STATUS_DISABLED
 } MotorsStatus;
 
 /* NOTE: `MountStatus` alias removed - use `MotorsStatus` throughout the codebase. */
@@ -87,7 +87,6 @@ void motors_enable(void);
 
 void motors_disable(void);
 
-
 /*
  * Return a snapshot copy of the current `MotorsState`.
  */
@@ -101,10 +100,7 @@ void motors_stop(void);
 void motors_park(void);
 
 /* Convenience high-level home action. */
-void motors_home(void);
-
-/* Delegate handling for the STOP button action. */
-void motors_button_stop(void);
+void motors_home(float lat);
 
 /*
  * Update the motors module authoritative axis positions.
@@ -151,8 +147,8 @@ MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed);
 MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed);
 
 /* Move both axes to absolute angles in degrees. */
-MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed);
+MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed, float lat);
 
-MotorResultCode motors_slew_axis_ra(float degrees, int speed);
+MotorResultCode motors_slew_axis_ra(float degrees, int speed, float lat);
 
-MotorResultCode motors_slew_axis_dec(float degrees, int speed);
+MotorResultCode motors_slew_axis_dec(float degrees, int speed, float lat);

@@ -24,7 +24,7 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
 
-    bool is_home = (data.status == MOUNT_STATUS_READY
+    bool is_home = (data.status == MOTORS_STATUS_READY
                     && data.ra.hours == 0 && data.ra.minutes == 0
                     && data.dec.degrees == 0 && data.dec.minutes == 0);
 

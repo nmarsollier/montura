@@ -12,3 +12,6 @@ bool buttons_hw_is_home_pressed(void);
 void buttons_hw_init(void);
 
 void buttons_init(void);
+
+/* STOP button state machine: DISABLED→enable, !READY→stop, READY→disable. */
+void buttons_handle_stop(void);

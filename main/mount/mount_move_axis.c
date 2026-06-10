@@ -17,7 +17,7 @@ MountResult mount_move_axis_ra(float degrees, int speed) {
         return mount_result_error("Degrees cannot be zero");
     }
 
-    MotorResultCode rc = motors_slew_axis_ra(degrees, speed);
+    MotorResultCode rc = motors_slew_axis_ra(degrees, speed, mount_internal_state.lat);
 
     if (rc != MOTOR_OK) {
         return motors_result_code_error_result(rc);
@@ -37,7 +37,7 @@ MountResult mount_move_axis_dec(float degrees, int speed) {
         return mount_result_error("Degrees cannot be zero");
     }
 
-    MotorResultCode rc = motors_slew_axis_dec(degrees, speed);
+    MotorResultCode rc = motors_slew_axis_dec(degrees, speed, mount_internal_state.lat);
 
     if (rc != MOTOR_OK) {
         return motors_result_code_error_result(rc);

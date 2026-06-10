@@ -2,18 +2,13 @@
  *
  * Purpose: start continuous tracking for the selected mode.
  *
- * Sends a high-priority TRACK command that will preempt any
- * in-progress slew, giving tracking absolute priority.
- *
- * Status is written synchronously so external readers immediately
- * see the tracking state. The command queue handles preemption.
+ * Status and tracking mode are set by process_command() when the
+ * motion task dequeues the TRACK command — no soft gate needed.
  */
 #include "motors.h"
-#include "motors_motion.h"
 #include "motors_internal.h"
 
 MotorResultCode motors_start_tracking(TrackingMode mode, float lat) {
-    /* TRACKING_NONE means "stop tracking" — just send STOP. */
     if (mode == TRACKING_NONE) {
         motors_stop();
         return MOTOR_OK;
@@ -24,19 +19,18 @@ MotorResultCode motors_start_tracking(TrackingMode mode, float lat) {
     /* Southern hemisphere: tracking direction is reversed. */
     if (lat < 0.0f) ra_speed = -ra_speed;
 
-    /* Pre-configure velocities for the task to pick up. */
-    motors_set_axis_velocity_ra(ra_speed);
-    motors_set_axis_velocity_dec(0.0f);
+    motors_state.ra_velocity = ra_speed;
+    motors_state.dec_velocity = 0.0f;
 
-    /* Soft gate — visible to status readers immediately. */
-    motors_state.tracking = mode;
-    motors_state.status = MOUNT_STATUS_TRACKING;
-
-    /*
-     * High-priority command — preempts any SLEW in progress.
-     * No explicit stop needed; the task handles preemption.
-     */
-    motors_motion_track(mode, ra_speed);
+    MotionCommand cmd = {
+        .type = MOTION_CMD_TRACK,
+        .ra_target_deg = 0.0f,   /* set by the task from limits */
+        .dec_target_deg = 0.0f,
+        .ra_velocity = ra_speed,
+        .dec_velocity = 0.0f,
+        .tracking_mode = mode,
+    };
+    motors_queue_send(&cmd);
 
     return MOTOR_OK;
 }

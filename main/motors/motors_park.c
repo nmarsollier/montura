@@ -1,13 +1,20 @@
 /* Motors - motors_park.c
  *
- * Purpose: park both axes via high-priority command.
+ * Purpose: park both axes immediately.
+ *
+ * Resets the command queue and sends a single fresh PARK.
+ * process_command() sets status = PARKED when the motion task
+ * dequeues the PARK.
  */
 #include "motors.h"
-#include "motors_motion.h"
+#include "motors_internal.h"
 
 void motors_park(void) {
-    motors_state.status = MOUNT_STATUS_PARKED;
-    motors_state.tracking = TRACKING_NONE;
+    motors_queue_clear();
 
-    motors_motion_park();
+    MotionCommand cmd = {
+        .type = MOTION_CMD_PARK,
+        .tracking_mode = TRACKING_NONE,
+    };
+    motors_queue_send(&cmd);
 }

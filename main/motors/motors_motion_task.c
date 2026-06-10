@@ -34,8 +34,7 @@
  *     - No ramping (tracking velocities are constant and very low).
  */
 
-#include "motors_motion.h"
-#include "motors_motion_internal.h"
+#include "motors_internal.h"
 #include "motors_internal.h"
 
 #include <math.h>
@@ -151,7 +150,7 @@ static float ramp_velocity(int target_vel_cds, int position_cds,
     }
 
     int curve = (distance_cds >= FAST_SLEW_CDS
-                 && motors_state.status == MOUNT_STATUS_SLEWING)
+                 && motors_state.status == MOTORS_STATUS_SLEWING)
                     ? 1
                     : 0;
 
@@ -224,8 +223,8 @@ static bool step_axis_ra(float target_deg, float deg_per_step) {
         return false;
     }
 
-    motors_motion_hw_set_direction_ra(direction);
-    motors_motion_hw_step_ra();
+    motors_hw_set_direction_ra(direction);
+    motors_hw_step_ra();
     motors_state.ra_position = next_position;
     return true;
 }
@@ -242,8 +241,8 @@ static bool step_axis_dec(float target_deg, float deg_per_step) {
         return false;
     }
 
-    motors_motion_hw_set_direction_dec(direction);
-    motors_motion_hw_step_dec();
+    motors_hw_set_direction_dec(direction);
+    motors_hw_step_dec();
     motors_state.dec_position = next_position;
     return true;
 }
@@ -258,10 +257,19 @@ static bool check_motion_conditions(float deg_per_step) {
     bool dec_has_target =
             fabsf(s_motion.dec_target - motors_state.dec_position) >= half_step;
 
-    /* Slew completion: both axes at target. */
-    if (motors_state.status == MOUNT_STATUS_SLEWING &&
+    /*
+     * Slew / move-axis completion: both axes at target.
+     *
+     * Use active_cmd_type rather than motors_state.status because the
+     * caller may have already set status to TRACKING (resume-after-slew
+     * pattern in motors_slew_to_angle / motors_slew_axis_*) before the
+     * motion task reaches the target.  Checking the authoritative
+     * s_motion field guarantees completion is always detected.
+     */
+    if ((s_motion.active_cmd_type == MOTION_CMD_SLEW ||
+         s_motion.active_cmd_type == MOTION_CMD_MOVE_AXIS) &&
         !ra_has_target && !dec_has_target) {
-        motors_state.status = MOUNT_STATUS_READY;
+        motors_state.status = MOTORS_STATUS_READY;
         motors_state.tracking = TRACKING_NONE;
         s_motion.motion_active = false;
 
@@ -270,8 +278,8 @@ static bool check_motion_conditions(float deg_per_step) {
 
     /* External tracking stop. */
     if (motors_state.tracking == TRACKING_NONE &&
-        motors_state.status == MOUNT_STATUS_TRACKING) {
-        motors_state.status = MOUNT_STATUS_READY;
+        motors_state.status == MOTORS_STATUS_TRACKING) {
+        motors_state.status = MOTORS_STATUS_READY;
         s_motion.motion_active = false;
 
         return false;
@@ -291,9 +299,9 @@ static void process_command(MotionCommand cmd) {
 
     switch (cmd.type) {
         case MOTION_CMD_SLEW:
-            motors_set_axis_velocity_ra(cmd.ra_velocity);
-            motors_set_axis_velocity_dec(cmd.dec_velocity);
-            motors_state.status = MOUNT_STATUS_SLEWING;
+            motors_state.ra_velocity = cmd.ra_velocity;
+            motors_state.dec_velocity = cmd.dec_velocity;
+            motors_state.status = MOTORS_STATUS_SLEWING;
             motors_state.tracking = TRACKING_NONE;
 
             if (cmd.relative) {
@@ -310,9 +318,9 @@ static void process_command(MotionCommand cmd) {
             break;
 
         case MOTION_CMD_TRACK:
-            motors_set_axis_velocity_ra(cmd.ra_velocity);
-            motors_set_axis_velocity_dec(0.0f);
-            motors_state.status = MOUNT_STATUS_TRACKING;
+            motors_state.ra_velocity = cmd.ra_velocity;
+            motors_state.dec_velocity = 0.0f;
+            motors_state.status = MOTORS_STATUS_TRACKING;
             motors_state.tracking = cmd.tracking_mode;
 
             /*
@@ -335,9 +343,9 @@ static void process_command(MotionCommand cmd) {
             break;
 
         case MOTION_CMD_MOVE_AXIS:
-            motors_set_axis_velocity_ra(fabsf(cmd.ra_velocity));
-            motors_set_axis_velocity_dec(fabsf(cmd.dec_velocity));
-            motors_state.status = MOUNT_STATUS_SLEWING;
+            motors_state.ra_velocity = fabsf(cmd.ra_velocity);
+            motors_state.dec_velocity = fabsf(cmd.dec_velocity);
+            motors_state.status = MOTORS_STATUS_SLEWING;
             motors_state.tracking = TRACKING_NONE;
 
             /*
@@ -359,27 +367,27 @@ static void process_command(MotionCommand cmd) {
 
         case MOTION_CMD_STOP:
             s_motion.motion_active = false;
-            motors_state.status = MOUNT_STATUS_READY;
+            motors_state.status = MOTORS_STATUS_READY;
             motors_state.tracking = TRACKING_NONE;
             break;
 
         case MOTION_CMD_PARK:
             s_motion.motion_active = false;
-            motors_state.status = MOUNT_STATUS_PARKED;
+            motors_state.status = MOTORS_STATUS_PARKED;
             motors_state.tracking = TRACKING_NONE;
             break;
 
         case MOTION_CMD_DISABLE:
             s_motion.motion_active = false;
-            motors_motion_hw_disable();
-            motors_state.status = MOUNT_STATUS_DISABLED;
+            motors_hw_disable();
+            motors_state.status = MOTORS_STATUS_DISABLED;
             motors_state.tracking = TRACKING_NONE;
             break;
 
         case MOTION_CMD_ENABLE:
             s_motion.motion_active = false;
-            motors_motion_hw_enable();
-            motors_state.status = MOUNT_STATUS_READY;
+            motors_hw_enable();
+            motors_state.status = MOTORS_STATUS_READY;
             motors_state.tracking = TRACKING_NONE;
             break;
 
@@ -472,8 +480,8 @@ static void slewing_loop(void) {
              * when we're actually going to process the command.
              */
             if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
-                int incoming_prio = motion_cmd_priority(cmd.type);
-                int current_prio = motion_cmd_priority(s_motion.active_cmd_type);
+                int incoming_prio = motors_queue_priority(cmd.type);
+                int current_prio = motors_queue_priority(s_motion.active_cmd_type);
 
                 if (incoming_prio < current_prio) {
                     xQueueReceive(motion_cmd_queue, &cmd, 0);
@@ -560,8 +568,8 @@ static void slewing_loop(void) {
                 if ((esp_timer_get_time() & 0x1FF) == 0) {
                     MotionCommand preempt_cmd;
                     if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                        if (motion_cmd_priority(preempt_cmd.type) <
-                            motion_cmd_priority(s_motion.active_cmd_type)) {
+                        if (motors_queue_priority(preempt_cmd.type) <
+                            motors_queue_priority(s_motion.active_cmd_type)) {
                             xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
@@ -583,8 +591,8 @@ static void slewing_loop(void) {
                 if ((esp_timer_get_time() & 0x1FF) == 0) {
                     MotionCommand preempt_cmd;
                     if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                        if (motion_cmd_priority(preempt_cmd.type) <
-                            motion_cmd_priority(s_motion.active_cmd_type)) {
+                        if (motors_queue_priority(preempt_cmd.type) <
+                            motors_queue_priority(s_motion.active_cmd_type)) {
                             xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                             process_command(preempt_cmd);
                             if (!s_motion.motion_active) return;
@@ -663,8 +671,8 @@ static void tracking_loop(void) {
 
             MotionCommand cmd;
             if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
-                int incoming_prio = motion_cmd_priority(cmd.type);
-                int current_prio = motion_cmd_priority(s_motion.active_cmd_type);
+                int incoming_prio = motors_queue_priority(cmd.type);
+                int current_prio = motors_queue_priority(s_motion.active_cmd_type);
 
                 if (incoming_prio < current_prio) {
                     xQueueReceive(motion_cmd_queue, &cmd, 0);
@@ -688,7 +696,7 @@ static void tracking_loop(void) {
              * from TRACKING to something else, exit so motion_loop()
              * redispatches to the correct loop (slewing_loop).
              */
-            if (motors_state.status != MOUNT_STATUS_TRACKING ||
+            if (motors_state.status != MOTORS_STATUS_TRACKING ||
                 motors_state.tracking == TRACKING_NONE) {
                 break;
             }
@@ -701,7 +709,7 @@ static void tracking_loop(void) {
             if (!step_axis_ra(s_motion.ra_target, deg_per_step)) {
                 /* Limit reached — terminate tracking. */
                 s_motion.motion_active = false;
-                motors_state.status = MOUNT_STATUS_READY;
+                motors_state.status = MOTORS_STATUS_READY;
                 motors_state.tracking = TRACKING_NONE;
                 return;
             }
@@ -754,8 +762,8 @@ static void tracking_loop(void) {
             if ((esp_timer_get_time() & 0x1FF) == 0) {
                 MotionCommand preempt_cmd;
                 if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                    if (motion_cmd_priority(preempt_cmd.type) <
-                        motion_cmd_priority(s_motion.active_cmd_type)) {
+                    if (motors_queue_priority(preempt_cmd.type) <
+                        motors_queue_priority(s_motion.active_cmd_type)) {
                         xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
                         process_command(preempt_cmd);
                         if (!s_motion.motion_active) return;
@@ -785,7 +793,7 @@ static void tracking_loop(void) {
  *     (incremental scheduling with ramps)
  * -------------------------------------------------------------------------- */
 static void motion_loop(void) {
-    if (motors_state.status == MOUNT_STATUS_TRACKING && motors_state.tracking != TRACKING_NONE) {
+    if (motors_state.status == MOTORS_STATUS_TRACKING && motors_state.tracking != TRACKING_NONE) {
         tracking_loop();
     } else {
         slewing_loop();
@@ -822,10 +830,7 @@ static void motors_motion_task_run(void *arg) {
  * Public API
  * -------------------------------------------------------------------------- */
 
-void motors_motion_init(void) {
-    /* Create the command queue before the task so it's ready on first use. */
-    motors_motion_cmd_queue_create();
-
+void motors_motion_task_start(void) {
     xTaskCreate(
         motors_motion_task_run,
         "motors_motion",
@@ -833,8 +838,6 @@ void motors_motion_init(void) {
         NULL,
         MOTION_TASK_PRIORITY,
         &s_motion_task_handle);
-
-    motors_motion_hw_init();
 
     /* Report stack high-water mark for diagnostics. */
     if (s_motion_task_handle != NULL) {

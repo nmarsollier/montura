@@ -8,6 +8,6 @@
  */
 #include "motors.h"
 
-void motors_home(void) {
-    motors_slew_to_angle(0.0f, 0.0f, 0);
+void motors_home(float lat) {
+    motors_slew_to_angle(0.0f, 0.0f, 0, lat);
 }
