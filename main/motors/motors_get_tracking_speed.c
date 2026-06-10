@@ -1,38 +1,19 @@
 /* Motors - motors_get_tracking_speed.c
  *
- * Purpose: return the angular speed for a given tracking mode.
+ * Purpose: return the RA axis angular velocity (deg/s) for a tracking mode.
+ *
+ * Precomputed from:
+ *   SIDEREAL  = 360° / 86164.0905308 s  (sidereal day)
+ *   SOLAR     = SIDEREAL − 360° / (365.256363004 × 86400)  (solar day minus annual motion)
+ *   LUNAR     = SIDEREAL − 360° / (27.321661   × 86400)  (sidereal month)
  */
 #include "motors.h"
 
-#define SIDEREAL_RATE_DEG_PER_S (360.0f / 86164.0905308f)
-
-/*
- * Tracking profiles map to physical axis angular speeds in degrees per second.
- *
- * Mechanical gearing affects step rates, but the public API still works in
- * axis space.
- */
 float motors_get_tracking_speed(TrackingMode mode) {
     switch (mode) {
-        case TRACKING_SIDEREAL:
-            return SIDEREAL_RATE_DEG_PER_S;
-
-        case TRACKING_SOLAR: {
-            /* Sun's mean eastward motion among the stars. */
-            const float SIDEREAL_YEAR_DAYS = 365.256363004f;
-            const float sun_rate = 360.0f / (SIDEREAL_YEAR_DAYS * 86400.0f); /* deg/s */
-            return SIDEREAL_RATE_DEG_PER_S - sun_rate;
-        }
-
-        case TRACKING_LUNAR: {
-            /* Moon's mean eastward motion among the stars. */
-            const float SIDEREAL_MONTH_DAYS = 27.321661f;
-            const float moon_rate = 360.0f / (SIDEREAL_MONTH_DAYS * 86400.0f); /* deg/s */
-            return SIDEREAL_RATE_DEG_PER_S - moon_rate;
-        }
-
-        case TRACKING_NONE:
-        default:
-            return 0.0f;
+        case TRACKING_SIDEREAL: return 0.004178074f;
+        case TRACKING_SOLAR: return 0.004166667f;
+        case TRACKING_LUNAR: return 0.004025576f;
+        default: return 0.0f;
     }
 }

@@ -46,9 +46,11 @@
 
         <!-- Time row -->
         <div class="settings-row">
-            <span class="settings-label">Fecha y hora</span>
-            <span class="settings-value" x-text="mountTime">--</span>
-            <button @click="updateTime()">Actualizar hora</button>
+            <span class="settings-fields">
+                <span class="settings-label">Fecha y hora</span>
+                <span class="settings-value" x-text="mountTime">--</span>
+            </span>
+            <button @click="updateTime()">Actualizar</button>
         </div>
 
         <!-- Location row -->
@@ -77,7 +79,7 @@
             <div class="row">
                 <button class="danger" @click="stop()">STOP</button>
                 <button @click="home()">HOME</button>
-                <button @click="park()"  x-show="!isParked">PARK</button>
+                <button @click="park()" x-show="!isParked">PARK</button>
                 <button @click="unpark()" x-show="isParked">UNPARK</button>
             </div>
         </div>
@@ -140,6 +142,37 @@
                     <div></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ═══ Joystick (continuous) ═══ -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <strong>Joystick</strong> <span class="hint">(hold to move, release to stop)</span>
+        </div>
+        <div class="joy-grid">
+            <div></div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('ra', 1)" @pointerup="joyStop('ra')"
+                    @pointerleave="joyStop('ra')" title="RA +">▲
+            </button>
+            <div></div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('dec', -1)" @pointerup="joyStop('dec')"
+                    @pointerleave="joyStop('dec')" title="DEC −">◀
+            </button>
+            <div class="joy-center">⏺</div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('dec', 1)" @pointerup="joyStop('dec')"
+                    @pointerleave="joyStop('dec')" title="DEC +">▶
+            </button>
+            <div></div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('ra', -1)" @pointerup="joyStop('ra')"
+                    @pointerleave="joyStop('ra')" title="RA −">▼
+            </button>
+            <div></div>
         </div>
     </div>
 

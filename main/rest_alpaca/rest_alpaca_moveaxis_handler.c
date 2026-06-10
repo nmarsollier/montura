@@ -13,9 +13,7 @@
 
 #include <math.h>
 
-/* Remember the last rate for each axis so setting one axis to 0
- * does not inadvertently stop the other. */
-static float s_ra_rate  = 0.0f;
+static float s_ra_rate = 0.0f;
 static float s_dec_rate = 0.0f;
 
 esp_err_t alpaca_moveaxis_handler(httpd_req_t *req) {
@@ -33,17 +31,11 @@ esp_err_t alpaca_moveaxis_handler(httpd_req_t *req) {
         return ESP_OK;
     }
 
-    /* Convert profile index (±1..±4) to deg/s, preserving direction. */
-    float axis_rate_dps = 0.0f;
-    if (fabsf(rate) >= 1.0f) {
-        axis_rate_dps = motors_get_slewing_speed((int) fabsf(rate));
-        if (rate < 0.0f) axis_rate_dps = -axis_rate_dps;
-    }
-
+    float hi = motors_get_slewing_speed(4);
     if (axis == 0) {
-        s_ra_rate = axis_rate_dps;
+        s_ra_rate = fmaxf(fminf(rate, hi), 0.0f);
     } else {
-        s_dec_rate = axis_rate_dps;
+        s_dec_rate = fmaxf(fminf(rate, hi), 0.0f);
     }
 
     MountResult result = mount_set_move_axis_velocity(s_ra_rate, s_dec_rate);

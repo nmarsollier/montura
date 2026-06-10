@@ -75,7 +75,8 @@ static struct {
  * Row 1 — aggressive (10 % quadratic accel, 60 % cruise, 30 % linear decel)
  */
 static const uint8_t VELOCITY_CURVE[2][100] = {
-    {   /* Row 0 — gentle profile */
+    {
+        /* Row 0 — gentle profile */
         0, 3, 7, 10, 14, 17, 21, 24, 28, 31,
         34, 38, 41, 45, 48, 52, 55, 59, 62, 66,
         69, 72, 76, 79, 83, 86, 90, 93, 97, 100,
@@ -87,7 +88,8 @@ static const uint8_t VELOCITY_CURVE[2][100] = {
         66, 62, 59, 55, 52, 48, 45, 41, 38, 34,
         31, 28, 24, 21, 17, 14, 10, 7, 3, 0,
     },
-    {   /* Row 1 — aggressive profile */
+    {
+        /* Row 1 — aggressive profile */
         0, 1, 5, 11, 20, 31, 44, 60, 79, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -195,6 +197,10 @@ static bool step_axis_ra(float target_deg, float deg_per_step) {
         return false;
     }
 
+    if (!s_motion.motion_active) {
+        return false; /* sync stopped motion mid-iteration */
+    }
+
     motors_hw_set_direction_ra(direction);
     motors_hw_step_ra();
     motors_state.ra_position = next_position;
@@ -211,6 +217,10 @@ static bool step_axis_dec(float target_deg, float deg_per_step) {
 
     if (!motors_is_valid_dec(next_position)) {
         return false;
+    }
+
+    if (!s_motion.motion_active) {
+        return false; /* sync stopped motion mid-iteration */
     }
 
     motors_hw_set_direction_dec(direction);
@@ -388,6 +398,24 @@ static void process_command(MotionCommand cmd) {
 
             break;
     }
+}
+
+/* --------------------------------------------------------------------------
+ * Synchronous position sync — called directly from the REST / mount layer.
+ * Updates motors_state and internal targets without going through the queue
+ * so mount_sync can return OK only after the position has been applied.
+ * -------------------------------------------------------------------------- */
+void motors_motion_sync_apply(float ra_axis_deg, float dec_axis_deg) {
+    /* Stop any active motion — prevents the loop from fighting the update. */
+    s_motion.motion_active = false;
+
+    motors_state.ra_position = ra_axis_deg;
+    motors_state.dec_position = dec_axis_deg;
+
+    s_motion.ra_target = ra_axis_deg;
+    s_motion.dec_target = dec_axis_deg;
+    s_motion.ra_start = ra_axis_deg;
+    s_motion.dec_start = dec_axis_deg;
 }
 
 /* --------------------------------------------------------------------------

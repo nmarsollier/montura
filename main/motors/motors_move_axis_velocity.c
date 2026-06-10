@@ -7,10 +7,8 @@
 #include "motors.h"
 #include "motors_internal.h"
 
-#include <math.h>
-
 void motors_set_move_axis_velocity(float rate_ra, float rate_dec) {
-    if (fabsf(rate_ra) < 1e-9f && fabsf(rate_dec) < 1e-9f) {
+    if ((int) rate_ra == 0 && (int) rate_dec == 0) {
         motors_stop();
         return;
     }

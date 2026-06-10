@@ -4,26 +4,28 @@
    ═══════════════════════════════════════════════════ */
 
 :root {
-    --bg:            #080808;
-    --panel:         #111111;
-    --panel-raised:  #181818;
-    --border:        #251010;
-    --accent:        #8b1a1a;
+    --bg: #080808;
+    --panel: #111111;
+    --panel-raised: #181818;
+    --border: #251010;
+    --accent: #8b1a1a;
     --accent-bright: #b52222;
-    --accent-glow:   #3d0808;
-    --text:          #ebebeb;
-    --text-dim:      #8a7a7a;
-    --text-title:    #e8c0c0;
-    --text-accent:   #d48080;
-    --btn-bg:        #1c0d0d;
-    --btn-hover:     #3d1515;
-    --btn-active:    #5a1a1a;
-    --input-bg:      #0d0d0d;
-    --input-border:  #2a1515;
-    --shadow:        0 4px 24px rgba(0, 0, 0, .7);
+    --accent-glow: #3d0808;
+    --text: #ebebeb;
+    --text-dim: #8a7a7a;
+    --text-title: #e8c0c0;
+    --text-accent: #d48080;
+    --btn-bg: #1c0d0d;
+    --btn-hover: #3d1515;
+    --btn-active: #5a1a1a;
+    --input-bg: #0d0d0d;
+    --input-border: #2a1515;
+    --shadow: 0 4px 24px rgba(0, 0, 0, .7);
 }
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     font-family: 'Inter', system-ui, -apple-system, Arial, sans-serif;
@@ -59,7 +61,7 @@ body {
     font-weight: 800;
     letter-spacing: 2px;
     color: var(--text-title);
-    text-shadow: 0 0 40px var(--accent-glow), 0 2px 4px rgba(0,0,0,.8);
+    text-shadow: 0 0 40px var(--accent-glow), 0 2px 4px rgba(0, 0, 0, .8);
     margin: 0;
 }
 
@@ -335,6 +337,56 @@ button.primary:hover {
     letter-spacing: .6px;
 }
 
+/* --- Joystick (continuous move) --- */
+.joy-grid {
+    display: grid;
+    grid-template-columns: 52px 52px 52px;
+    grid-template-rows: 48px 48px 48px;
+    align-items: center;
+    justify-items: center;
+    gap: 4px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.joy-btn {
+    width: 48px;
+    height: 42px;
+    font-size: 18px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.joy-btn:active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.joy-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: normal;
+}
+
+
 /* ═══════════════════════════════════════════════════
    Settings — time + location
    ═══════════════════════════════════════════════════ */
@@ -424,6 +476,7 @@ button.primary:hover {
         gap: 16px;
         max-width: 100%;
     }
+
     .slew-pad {
         order: -1;
     }
@@ -520,12 +573,15 @@ footer code {
     .grid {
         grid-template-columns: 1fr;
     }
+
     .header-brand {
         font-size: 26px;
     }
+
     .app {
         padding: 12px 8px 30px;
     }
+
     .panel {
         padding: 14px;
     }

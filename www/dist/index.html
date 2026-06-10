@@ -11,26 +11,28 @@
    ═══════════════════════════════════════════════════ */
 
 :root {
-    --bg:            #080808;
-    --panel:         #111111;
-    --panel-raised:  #181818;
-    --border:        #251010;
-    --accent:        #8b1a1a;
+    --bg: #080808;
+    --panel: #111111;
+    --panel-raised: #181818;
+    --border: #251010;
+    --accent: #8b1a1a;
     --accent-bright: #b52222;
-    --accent-glow:   #3d0808;
-    --text:          #ebebeb;
-    --text-dim:      #8a7a7a;
-    --text-title:    #e8c0c0;
-    --text-accent:   #d48080;
-    --btn-bg:        #1c0d0d;
-    --btn-hover:     #3d1515;
-    --btn-active:    #5a1a1a;
-    --input-bg:      #0d0d0d;
-    --input-border:  #2a1515;
-    --shadow:        0 4px 24px rgba(0, 0, 0, .7);
+    --accent-glow: #3d0808;
+    --text: #ebebeb;
+    --text-dim: #8a7a7a;
+    --text-title: #e8c0c0;
+    --text-accent: #d48080;
+    --btn-bg: #1c0d0d;
+    --btn-hover: #3d1515;
+    --btn-active: #5a1a1a;
+    --input-bg: #0d0d0d;
+    --input-border: #2a1515;
+    --shadow: 0 4px 24px rgba(0, 0, 0, .7);
 }
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     font-family: 'Inter', system-ui, -apple-system, Arial, sans-serif;
@@ -66,7 +68,7 @@ body {
     font-weight: 800;
     letter-spacing: 2px;
     color: var(--text-title);
-    text-shadow: 0 0 40px var(--accent-glow), 0 2px 4px rgba(0,0,0,.8);
+    text-shadow: 0 0 40px var(--accent-glow), 0 2px 4px rgba(0, 0, 0, .8);
     margin: 0;
 }
 
@@ -342,6 +344,56 @@ button.primary:hover {
     letter-spacing: .6px;
 }
 
+/* --- Joystick (continuous move) --- */
+.joy-grid {
+    display: grid;
+    grid-template-columns: 52px 52px 52px;
+    grid-template-rows: 48px 48px 48px;
+    align-items: center;
+    justify-items: center;
+    gap: 4px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.joy-btn {
+    width: 48px;
+    height: 42px;
+    font-size: 18px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.joy-btn:active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.joy-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: normal;
+}
+
+
 /* ═══════════════════════════════════════════════════
    Settings — time + location
    ═══════════════════════════════════════════════════ */
@@ -431,6 +483,7 @@ button.primary:hover {
         gap: 16px;
         max-width: 100%;
     }
+
     .slew-pad {
         order: -1;
     }
@@ -527,12 +580,15 @@ footer code {
     .grid {
         grid-template-columns: 1fr;
     }
+
     .header-brand {
         font-size: 26px;
     }
+
     .app {
         padding: 12px 8px 30px;
     }
+
     .panel {
         padding: 14px;
     }
@@ -578,9 +634,11 @@ footer code {
 
         <!-- Time row -->
         <div class="settings-row">
-            <span class="settings-label">Fecha y hora</span>
-            <span class="settings-value" x-text="mountTime">--</span>
-            <button @click="updateTime()">Actualizar hora</button>
+            <span class="settings-fields">
+                <span class="settings-label">Fecha y hora</span>
+                <span class="settings-value" x-text="mountTime">--</span>
+            </span>
+            <button @click="updateTime()">Actualizar</button>
         </div>
 
         <!-- Location row -->
@@ -609,7 +667,7 @@ footer code {
             <div class="row">
                 <button class="danger" @click="stop()">STOP</button>
                 <button @click="home()">HOME</button>
-                <button @click="park()"  x-show="!isParked">PARK</button>
+                <button @click="park()" x-show="!isParked">PARK</button>
                 <button @click="unpark()" x-show="isParked">UNPARK</button>
             </div>
         </div>
@@ -672,6 +730,37 @@ footer code {
                     <div></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ═══ Joystick (continuous) ═══ -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <strong>Joystick</strong> <span class="hint">(hold to move, release to stop)</span>
+        </div>
+        <div class="joy-grid">
+            <div></div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('ra', 1)" @pointerup="joyStop('ra')"
+                    @pointerleave="joyStop('ra')" title="RA +">▲
+            </button>
+            <div></div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('dec', -1)" @pointerup="joyStop('dec')"
+                    @pointerleave="joyStop('dec')" title="DEC −">◀
+            </button>
+            <div class="joy-center">⏺</div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('dec', 1)" @pointerup="joyStop('dec')"
+                    @pointerleave="joyStop('dec')" title="DEC +">▶
+            </button>
+            <div></div>
+            <button class="joy-btn"
+                    @pointerdown="joyStart('ra', -1)" @pointerup="joyStop('ra')"
+                    @pointerleave="joyStop('ra')" title="RA −">▼
+            </button>
+            <div></div>
         </div>
     </div>
 
@@ -840,6 +929,22 @@ footer code {
         setTracking() {
             this.apiPost('/api/tracking', {tracking: this.trackingOptions[this.selectedTracking]})
                 .then(() => this.fetchStatus());
+        },
+
+        // --- Joystick (continuous move via /api/move-axis-velocity) ---
+        joyRates: {ra: 0, dec: 0},
+
+        joyStart(axis, dir) {
+            const dps = 16.0;  // speed profile 4
+            this.joyRates[axis] = dir * dps;
+            const body = {ra_rate: this.joyRates.ra, dec_rate: this.joyRates.dec};
+            this.apiPost('/api/move-axis-velocity', body);
+        },
+
+        joyStop(axis) {
+            this.joyRates[axis] = 0;
+            const body = {ra_rate: this.joyRates.ra, dec_rate: this.joyRates.dec};
+            this.apiPost('/api/move-axis-velocity', body);
         },
 
         doSlew(axis, dir) {

@@ -89,6 +89,22 @@ function mountApp() {
                 .then(() => this.fetchStatus());
         },
 
+        // --- Joystick (continuous move via /api/move-axis-velocity) ---
+        joyRates: {ra: 0, dec: 0},
+
+        joyStart(axis, dir) {
+            const dps = 16.0;  // speed profile 4
+            this.joyRates[axis] = dir * dps;
+            const body = {ra_rate: this.joyRates.ra, dec_rate: this.joyRates.dec};
+            this.apiPost('/api/move-axis-velocity', body);
+        },
+
+        joyStop(axis) {
+            this.joyRates[axis] = 0;
+            const body = {ra_rate: this.joyRates.ra, dec_rate: this.joyRates.dec};
+            this.apiPost('/api/move-axis-velocity', body);
+        },
+
         doSlew(axis, dir) {
             const axisName = axis === 'ra' ? 'ra' : 'dec';
             const deg = Math.min(180, Math.max(1, Math.round(Math.abs(this.slew.degrees || 5))));

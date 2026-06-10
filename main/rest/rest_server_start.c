@@ -19,7 +19,7 @@ static const char *TAG = "REST_API_SERVER";
 void rest_server_start(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 16;
+    config.max_uri_handlers = 18;
     config.max_open_sockets = 5;
     config.lru_purge_enable = true;
     config.ctrl_port = 32768;
@@ -36,6 +36,7 @@ void rest_server_start(void) {
 
     rest_register_post(server, "/api/tracking", rest_tracking_handler);
     rest_register_post(server, "/api/move-axis", rest_move_axis_handler);
+    rest_register_post(server, "/api/move-axis-velocity", rest_move_axis_velocity_handler);
     rest_register_post(server, "/api/goto", rest_goto_handler);
     rest_register_post(server, "/api/stop", rest_stop_handler);
     rest_register_post(server, "/api/park", rest_park_handler);

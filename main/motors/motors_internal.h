@@ -130,6 +130,9 @@ void motors_hw_step_dec(void);
  * Task & queue lifecycle (motors_task.c, motors_queue.c).
  * ========================================================================= */
 
+/* Apply a sync immediately — updates motors_state and internal targets. */
+void motors_motion_sync_apply(float ra_axis_deg, float dec_axis_deg);
+
 void motors_motion_task_init(void);
 
 void motors_queue_init(void);

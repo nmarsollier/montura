@@ -54,10 +54,11 @@ idf_component_register(
         "network/network_is_setup_ap_started.c"
         "network/network_sntp.c"
 
-        "rest/rest_api_server.c"
+        "rest/rest_server_start.c"
         "rest/rest_goto_handler.c"
         "rest/rest_home_handler.c"
         "rest/rest_move_axis_handler.c"
+        "rest/rest_move_axis_velocity_handler.c"
         "rest/rest_park_handler.c"
         "rest/rest_html_handler.c"
         "rest/rest_settings_handler.c"
