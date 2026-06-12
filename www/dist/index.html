@@ -822,7 +822,7 @@ footer code {
         </div>
         <div class="row">
             <input placeholder="SSID" x-model="wifi.ssid">
-            <input placeholder="Password" x-model="wifi.password" type="password">
+            <input placeholder="Password" x-model="wifi.password" type="text">
             <button class="primary"
                     @click="apiPost('/api/wifi-config', {ssid: wifi.ssid, password: wifi.password}).then(() => fetchStatus())">
                 Conectar
