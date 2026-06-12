@@ -103,3 +103,8 @@ void alpaca_read_body(httpd_req_t *req);
 /* Diagnostic: return the shared body buffer. */
 const char *alpaca_dump_body(httpd_req_t *req, int *out_len);
 
+/*
+ * Reset the stored MoveAxis rates to zero — called when a STOP is issued.
+ */
+void alpaca_moveaxis_reset(void);
+

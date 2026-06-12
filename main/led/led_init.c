@@ -6,11 +6,12 @@
 
 #include "driver/gpio.h"
 
-#define LED_GPIO GPIO_NUM_2
+#define LED_GPIO     GPIO_NUM_2
+#define LED_EXT_GPIO GPIO_NUM_23
 
 void led_init(void) {
     gpio_config_t cfg = {
-        .pin_bit_mask = 1ULL << LED_GPIO,
+        .pin_bit_mask = (1ULL << LED_GPIO) | (1ULL << LED_EXT_GPIO),
         .mode         = GPIO_MODE_OUTPUT,
         .pull_up_en   = GPIO_PULLDOWN_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -18,4 +19,5 @@ void led_init(void) {
     };
     gpio_config(&cfg);
     gpio_set_level(LED_GPIO, 0);
+    gpio_set_level(LED_EXT_GPIO, 0);
 }

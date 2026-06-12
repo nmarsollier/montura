@@ -37,6 +37,7 @@ void setup_init(void) {
     buttons_init();
 
     led_init();
+    led_external_on(0);
 
     mount_init();
 

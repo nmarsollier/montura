@@ -111,6 +111,9 @@ static const uint8_t VELOCITY_CURVE[2][100] = {
  */
 static float ramp_velocity(int target_vel_cds, int position_cds,
                            int start_position_cds, int distance_cds) {
+    if (target_vel_cds == 0)
+        return 0.0f;
+
     if (distance_cds == 0)
         return (float) target_vel_cds / 100.0f;
 
@@ -339,17 +342,17 @@ static void process_command(MotionCommand cmd) {
             motors_state.status = MOTORS_STATUS_SLEWING;
             motors_state.tracking = TRACKING_NONE;
 
-            /*
-             * Continuous motion: each moving axis targets its limit in the
-             * direction of travel so the loop never self-completes.
-             * Motion stops only on the next command (rate = 0 or STOP).
-             */
-            s_motion.ra_target = (cmd.ra_velocity >= 0.0f)
+            s_motion.ra_target = (cmd.ra_velocity > 0.0f)
                                      ? motors_state.limits.ra_max
-                                     : motors_state.limits.ra_min;
-            s_motion.dec_target = (cmd.dec_velocity >= 0.0f)
+                                     : (cmd.ra_velocity < 0.0f)
+                                         ? motors_state.limits.ra_min
+                                         : motors_state.ra_position;
+            s_motion.dec_target = (cmd.dec_velocity > 0.0f)
                                       ? motors_state.limits.dec_max
-                                      : motors_state.limits.dec_min;
+                                      : (cmd.dec_velocity < 0.0f)
+                                          ? motors_state.limits.dec_min
+                                          : motors_state.dec_position;
+
             s_motion.ra_start = motors_state.ra_position;
             s_motion.dec_start = motors_state.dec_position;
             s_motion.motion_active = true;

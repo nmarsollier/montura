@@ -9,6 +9,7 @@
  */
 #include "buttons.h"
 #include "motors.h"
+#include "mount.h"
 
 #include "esp_log.h"
 
@@ -23,8 +24,8 @@ void buttons_handle_stop(void) {
     }
 
     if (state.status != MOTORS_STATUS_READY) {
-        ESP_LOGI(TAG, "STOP: not READY (status=%d) -> motors_stop()", state.status);
-        motors_stop();
+        ESP_LOGI(TAG, "STOP: not READY (status=%d) -> mount_stop()", state.status);
+        mount_stop();
         return;
     }
 

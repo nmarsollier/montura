@@ -43,3 +43,8 @@ esp_err_t alpaca_moveaxis_handler(httpd_req_t *req) {
     else alpaca_response_error(req, 1025, result.message, cid, stx);
     return ESP_OK;
 }
+
+void alpaca_moveaxis_reset(void) {
+    s_ra_rate = 0.0f;
+    s_dec_rate = 0.0f;
+}
