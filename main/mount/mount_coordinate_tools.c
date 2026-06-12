@@ -133,26 +133,27 @@ AxisCoordinates equatorial_to_axis(EquatorialCoordinates eq) {
 EquatorialCoordinates axis_to_equatorial(AxisCoordinates axis) {
     EquatorialCoordinates out;
 
-    /* Determine pier side from the axis position.
+    /* Detect flip from DEC axis sign.
      *
-     * On the normal side    |RA_axis| ≤ 120° and DEC = DEC_axis − 90°.
-     * On the flipped side   the *un-flipped* RA would be > 120° in
-     * magnitude, so we detect the flip by checking both candidates. */
-
-    float ra_norm = normalize_degf(axis.ra_axis_deg);        /* assume normal */
-    float ra_flip = normalize_degf(axis.ra_axis_deg > 0.0f
-                                       ? axis.ra_axis_deg - 180.0f
-                                       : axis.ra_axis_deg + 180.0f);
-
+     * equatorial_to_axis produces:
+     *   Normal:  dec_axis =  DEC + 90°  →  dec_axis ∈ [0°, 180°]
+     *   Flipped: dec_axis = −(DEC + 90°)  →  dec_axis ∈ [−180°, 0°)
+     *
+     * The sign of the current DEC axis position is deterministic —
+     * unlike RA, which stays within ±RA_LIMIT_DEG after a flip and
+     * cannot be used to distinguish the two configurations.
+     */
     float ha_deg;
-    if (fabsf(ra_norm) <= RA_LIMIT_DEG) {
+    if (axis.dec_axis_deg >= 0.0f) {
         /* Normal side — RA axis directly encodes HA. */
-        ha_deg = ra_norm;
+        ha_deg = normalize_degf(axis.ra_axis_deg);
         out.dec_deg = axis.dec_axis_deg - 90.0f;
     } else {
         /* Flipped side — reverse the flip.
-         * DEC_axis = −(DEC_sky + 90)  →  DEC_sky = −DEC_axis − 90 */
-        ha_deg = ra_flip;
+         * DEC_axis = −(DEC_sky + 90°)  →  DEC_sky = −DEC_axis − 90° */
+        ha_deg = normalize_degf(axis.ra_axis_deg > 0.0f
+                                    ? axis.ra_axis_deg - 180.0f
+                                    : axis.ra_axis_deg + 180.0f);
         out.dec_deg = -axis.dec_axis_deg - 90.0f;
     }
 
