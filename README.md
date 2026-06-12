@@ -79,19 +79,46 @@ Supporting modules:
 
 ## Setup
 
-### Requirements (VS Code / CLion)
+### Requirements
 
-- ESP-IDF extension (Espressif) or ESP-IDF plugin
-- C/C++ tooling
-- CMake
+| Tool         | Version                          | Purpose                        |
+|-------------|----------------------------------|--------------------------------|
+| ESP-IDF     | v6.0.1                           | Firmware build system          |
+| Python      | 3.10+ (venv)                     | Required by ESP-IDF tools      |
+| CMake       | 4.x                              | Build system                   |
+| Ninja       | 1.x                              | Build executor                 |
+| Node.js     | 22+                              | Web UI build (`www/build.js`)  |
+| npm         | 9+                               | UI dependencies (Alpine.js)    |
+
+### macOS install
+
+```sh
+# ESP-IDF v6.0.1
+mkdir -p ~/.espressif
+git clone --depth 1 --branch v6.0.1 https://github.com/espressif/esp-idf.git ~/.espressif/v6.0.1/esp-idf
+export IDF_TOOLS_PATH="$HOME/.espressif/tools"
+cd ~/.espressif/v6.0.1/esp-idf && bash install.sh esp32
+
+# build tools + Node.js
+brew install cmake ninja node
+cd www && npm install
+```
+
+Add to `~/.zshrc` (adjust paths to match your system):
+
+```sh
+export IDF_PATH="$HOME/.espressif/v6.0.1/esp-idf"
+export IDF_TOOLS_PATH="$HOME/.espressif/tools"
+export IDF_PYTHON_ENV_PATH="$HOME/.espressif/tools/python/v6.0.1/venv"
+export PYTHON="$IDF_PYTHON_ENV_PATH/bin/python"
+alias idf.py="$PYTHON $IDF_PATH/tools/idf.py"
+```
 
 ### Build
 
 ```sh
 idf.py set-target esp32
-idf.py build
-idf.py flash
-idf.py monitor       # baud 115200
+idf.py build flash monitor
 ```
 
 ### Web UI
