@@ -7,6 +7,8 @@ This firmware runs on an ESP32 NodeMCU board, driving two NEMA 17 stepper motors
 TMC2209 drivers. It exposes a full ASCOM Alpaca telescope interface on port 11111 so
 N.I.N.A. and other clients can discover and control the mount directly.
 
+<img src="docs/monturita.jpeg" alt="Monturita" width="400">
+
 ## Architecture
 
 ```
