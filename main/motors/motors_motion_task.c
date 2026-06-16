@@ -1,4 +1,3 @@
-
 /* Motors - motors_motion_task.c
  *
  * Purpose: FreeRTOS motion task — consumes MotionCommands from the queue
@@ -90,16 +89,14 @@ static const uint8_t VELOCITY_CURVE[2][100] = {
     },
     {
         /* Row 1 — aggressive profile */
-        0, 1, 5, 11, 20, 31, 44, 60, 79, 100,
+        0, 5, 10, 15, 21, 26, 30, 34, 38, 42, 48, 53, 59, 63, 69, 74, 79, 83, 88, 93,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
         100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
-        100, 97, 93, 90, 86, 83, 79, 76, 72, 69,
-        66, 62, 59, 55, 52, 48, 45, 41, 38, 34,
-        31, 28, 24, 21, 17, 14, 10, 7, 3, 0,
+        93, 88, 83, 79, 74, 69, 63, 59, 53, 48, 42, 38, 34, 30, 24, 21, 15, 10, 5, 0,
     },
 };
 
@@ -345,13 +342,13 @@ static void process_command(MotionCommand cmd) {
             s_motion.ra_target = (cmd.ra_velocity > 0.0f)
                                      ? motors_state.limits.ra_max
                                      : (cmd.ra_velocity < 0.0f)
-                                         ? motors_state.limits.ra_min
-                                         : motors_state.ra_position;
+                                           ? motors_state.limits.ra_min
+                                           : motors_state.ra_position;
             s_motion.dec_target = (cmd.dec_velocity > 0.0f)
                                       ? motors_state.limits.dec_max
                                       : (cmd.dec_velocity < 0.0f)
-                                          ? motors_state.limits.dec_min
-                                          : motors_state.dec_position;
+                                            ? motors_state.limits.dec_min
+                                            : motors_state.dec_position;
 
             s_motion.ra_start = motors_state.ra_position;
             s_motion.dec_start = motors_state.dec_position;
