@@ -39,7 +39,7 @@ typedef struct {
 extern QueueHandle_t motion_cmd_queue;
 
 /* Send a MotionCommand to the back of the queue (FIFO). */
-void motors_queue_send(MotionCommand *cmd);
+void motors_queue_put(MotionCommand *cmd);
 
 /* Atomically discard every command in the queue. */
 void motors_queue_clear(void);

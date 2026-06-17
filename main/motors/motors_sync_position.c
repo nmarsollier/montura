@@ -32,6 +32,6 @@ void motors_sync_position(float ra_axis_deg, float dec_axis_deg) {
             .dec_speed = motors_state.dec_speed,
             .tracking_mode = saved_mode,
         };
-        motors_queue_send(&cmd);
+        motors_queue_put(&cmd);
     }
 }

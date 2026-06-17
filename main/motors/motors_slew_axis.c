@@ -29,7 +29,7 @@ static MotorResultCode motors_slew_axis_impl(float ra_delta_deg, float dec_delta
         .ra_delta_deg = ra_delta_deg,
         .dec_delta_deg = dec_delta_deg,
     };
-    motors_queue_send(&cmd);
+    motors_queue_put(&cmd);
 
     if (currTracking != TRACKING_NONE) {
         motors_start_tracking(currTracking, lat);

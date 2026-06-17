@@ -21,5 +21,5 @@ void motors_set_move_axis_speed(float ra_speed, float dec_speed) {
         .dec_speed = dec_speed,
         .tracking_mode = TRACKING_NONE,
     };
-    motors_queue_send(&cmd);
+    motors_queue_put(&cmd);
 }

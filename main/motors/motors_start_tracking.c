@@ -30,7 +30,7 @@ MotorResultCode motors_start_tracking(TrackingMode mode, float lat) {
         .dec_speed = 0.0f,
         .tracking_mode = mode,
     };
-    motors_queue_send(&cmd);
+    motors_queue_put(&cmd);
 
     return MOTOR_OK;
 }

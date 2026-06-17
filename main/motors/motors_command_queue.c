@@ -33,7 +33,7 @@ void motors_queue_init(void) {
  * Every command is sent to the back (FIFO order).  STOP / PARK / DISABLE
  * callers reset the queue before sending so they always run immediately.
  * -------------------------------------------------------------------------- */
-void motors_queue_send(MotionCommand *cmd) {
+void motors_queue_put(MotionCommand *cmd) {
     if (motion_cmd_queue == NULL) {
         ESP_LOGE(TAG, "Motion command queue not initialized");
         return;

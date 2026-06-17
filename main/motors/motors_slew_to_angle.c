@@ -56,7 +56,7 @@ MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_ra
         .ra_speed = speed,
         .dec_speed = speed,
     };
-    motors_queue_send(&cmd);
+    motors_queue_put(&cmd);
 
     if (currTracking != TRACKING_NONE) {
         motors_start_tracking(currTracking, lat);
