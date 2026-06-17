@@ -1,6 +1,6 @@
 /* Motors - motors_get_tracking_speed.c
  *
- * Purpose: return the RA axis angular velocity (deg/s) for a tracking mode.
+ * Purpose: return the RA axis angular speed (deg/s) for a tracking mode.
  *
  * Precomputed from:
  *   SIDEREAL  = 360° / 86164.0905308 s  (sidereal day)

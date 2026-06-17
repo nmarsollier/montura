@@ -21,8 +21,8 @@ esp_err_t rest_goto_handler(httpd_req_t *request) {
     HttpRequestBody body = http_request_read_body(request);
     JsonFloatResult ra = json_get_float(body.value, "ra");
     JsonFloatResult dec = json_get_float(body.value, "dec");
-    JsonIntResult speed = json_get_int(body.value, "speed");
-    int speed_value = 1;
+    JsonIntResult speed_rate = json_get_int(body.value, "speed");
+    int speed_rate_value = 1;
 
     if (!ra.ok) {
         http_response_bad_request(request, "Missing or invalid 'ra'. Valid values: [0<=ra<24]");
@@ -34,18 +34,18 @@ esp_err_t rest_goto_handler(httpd_req_t *request) {
         return ESP_OK;
     }
 
-    bool has_speed = strstr(body.value, "\"speed\"") != NULL;
+    bool has_speed_rate = strstr(body.value, "\"speed\"") != NULL;
 
-    if (has_speed && !speed.ok) {
-        http_response_bad_request(request, "Invalid 'speed'. Valid values: [1<=speed<=4]");
+    if (has_speed_rate && !speed_rate.ok) {
+        http_response_bad_request(request, "Invalid 'speed'. Valid values: [1<=speed_rate<=4]");
         return ESP_OK;
     }
 
-    if (has_speed) {
-        speed_value = speed.value;
+    if (has_speed_rate) {
+        speed_rate_value = speed_rate.value;
     }
 
-    rest_send_result(request, mount_goto(ra.value, dec.value, speed_value));
+    rest_send_result(request, mount_goto(ra.value, dec.value, speed_rate_value));
 
     return ESP_OK;
 }

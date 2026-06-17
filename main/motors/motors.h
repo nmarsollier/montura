@@ -47,10 +47,10 @@ typedef struct {
     MotorsStatus status;
     /* Current requested tracking mode. */
     TrackingMode tracking;
-    /* Current commanded/measured RA axis angular velocity (deg/s). */
-    float ra_velocity;
-    /* Current commanded/measured DEC axis angular velocity (deg/s). */
-    float dec_velocity;
+    /* Current commanded/measured RA axis angular speed (deg/s). */
+    float ra_speed;
+    /* Current commanded/measured DEC axis angular speed (deg/s). */
+    float dec_speed;
 
     /* Operational limits enforced by the motors module. */
     struct {
@@ -69,11 +69,6 @@ typedef enum {
     MOTOR_ERR_NOT_READY = 3,
     MOTOR_ERR_INTERNAL = 99
 } MotorResultCode;
-
-/*
- * Global state instance owned by the motors module.
- */
-extern MotorsState motors_state;
 
 /*
  * Initialize the motors subsystem.
@@ -118,17 +113,12 @@ MotorResultCode motors_start_tracking(TrackingMode mode, float lat);
  * Both zero is equivalent to STOP.  Used by Alpaca MoveAxis and
  * manual controls (buttons, joystick).
  */
-void motors_set_move_axis_velocity(float rate_ra, float rate_dec);
+void motors_set_move_axis_speed(float ra_speed, float dec_speed);
 
 /*
- * Return the RA-axis angular velocity (deg/s) for a given `TrackingMode`.
+ * Return the slewing angular speed (deg/s) for a given speed_rate profile.
  */
-float motors_get_tracking_speed(TrackingMode mode);
-
-/*
- * Return the module's default slewing speed (deg/s) for a requested profile.
- */
-float motors_get_slewing_speed(int speed);
+float motors_get_slewing_speed(int speed_rate);
 
 const char *motors_axis_valid_values(void);
 
@@ -141,14 +131,9 @@ TrackingMode tracking_from_string(const char *value);
 
 const char *tracking_valid_values(void);
 
-/* Move a single axis to an absolute angle in degrees. */
-MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed, float lat);
-
-MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed, float lat);
-
 /* Move both axes to absolute angles in degrees. */
-MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed, float lat);
+MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_rate, float lat);
 
-MotorResultCode motors_slew_axis_ra(float degrees, int speed, float lat);
+MotorResultCode motors_slew_axis_ra(float degrees, int speed_rate, float lat);
 
-MotorResultCode motors_slew_axis_dec(float degrees, int speed, float lat);
+MotorResultCode motors_slew_axis_dec(float degrees, int speed_rate, float lat);

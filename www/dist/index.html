@@ -932,20 +932,20 @@ footer code {
                 .then(() => this.fetchStatus());
         },
 
-        // --- Joystick (continuous move via /api/move-axis-velocity) ---
+        // --- Joystick (continuous move via /api/move-axis-speed) ---
         joyRates: {ra: 0, dec: 0},
 
         joyStart(axis, dir) {
             const dps = 16.0;  // speed profile 4
             this.joyRates[axis] = dir * dps;
             const body = {ra_rate: this.joyRates.ra, dec_rate: this.joyRates.dec};
-            this.apiPost('/api/move-axis-velocity', body);
+            this.apiPost('/api/move-axis-speed', body);
         },
 
         joyStop(axis) {
             this.joyRates[axis] = 0;
             const body = {ra_rate: this.joyRates.ra, dec_rate: this.joyRates.dec};
-            this.apiPost('/api/move-axis-velocity', body);
+            this.apiPost('/api/move-axis-speed', body);
         },
 
         doSlew(axis, dir) {

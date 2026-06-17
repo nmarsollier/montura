@@ -2,7 +2,7 @@
  *
  * Purpose: FreeRTOS motion task — consumes MotionCommands from the queue
  * and advances axis positions one microstep at a time at the frequency
- * required to achieve the commanded angular velocity.
+ * required to achieve the commanded angular speed.
  *
  * The motion task is the SINGLE WRITER of motors_state position,
  * status, and tracking fields — all other code only reads them.
@@ -141,7 +141,7 @@ static float ramp_velocity(int target_vel_cds, int position_cds,
  * -------------------------------------------------------------------------- */
 
 /*
- * Convert an angular velocity (deg/s) to a step period in microseconds.
+ * Convert an angular speed (deg/s) to a step period in microseconds.
  * Uses the runtime microstep resolution from the TMC driver.
  * Returns MAX_STEP_PERIOD_US when velocity is effectively zero.
  */
@@ -290,8 +290,8 @@ static void process_command(MotionCommand cmd) {
 
     switch (cmd.type) {
         case MOTION_CMD_SLEW:
-            motors_state.ra_velocity = cmd.ra_velocity;
-            motors_state.dec_velocity = cmd.dec_velocity;
+            motors_state.ra_speed = cmd.ra_speed;
+            motors_state.dec_speed = cmd.dec_speed;
             motors_state.status = MOTORS_STATUS_SLEWING;
             motors_state.tracking = TRACKING_NONE;
 
@@ -309,8 +309,8 @@ static void process_command(MotionCommand cmd) {
             break;
 
         case MOTION_CMD_TRACK:
-            motors_state.ra_velocity = cmd.ra_velocity;
-            motors_state.dec_velocity = 0.0f;
+            motors_state.ra_speed = cmd.ra_speed;
+            motors_state.dec_speed = 0.0f;
             motors_state.status = MOTORS_STATUS_TRACKING;
             motors_state.tracking = cmd.tracking_mode;
 
@@ -323,7 +323,7 @@ static void process_command(MotionCommand cmd) {
              * negative velocity → ra_min (southern).  The sign is set by
              * motors_start_tracking based on site latitude.
              */
-            s_motion.ra_target = (cmd.ra_velocity >= 0.0f)
+            s_motion.ra_target = (cmd.ra_speed >= 0.0f)
                                      ? motors_state.limits.ra_max
                                      : motors_state.limits.ra_min;
             s_motion.dec_target = motors_state.dec_position;
@@ -334,19 +334,19 @@ static void process_command(MotionCommand cmd) {
             break;
 
         case MOTION_CMD_MOVE_AXIS:
-            motors_state.ra_velocity = fabsf(cmd.ra_velocity);
-            motors_state.dec_velocity = fabsf(cmd.dec_velocity);
+            motors_state.ra_speed = fabsf(cmd.ra_speed);
+            motors_state.dec_speed = fabsf(cmd.dec_speed);
             motors_state.status = MOTORS_STATUS_SLEWING;
             motors_state.tracking = TRACKING_NONE;
 
-            s_motion.ra_target = (cmd.ra_velocity > 0.0f)
+            s_motion.ra_target = (cmd.ra_speed > 0.0f)
                                      ? motors_state.limits.ra_max
-                                     : (cmd.ra_velocity < 0.0f)
+                                     : (cmd.ra_speed < 0.0f)
                                            ? motors_state.limits.ra_min
                                            : motors_state.ra_position;
-            s_motion.dec_target = (cmd.dec_velocity > 0.0f)
+            s_motion.dec_target = (cmd.dec_speed > 0.0f)
                                       ? motors_state.limits.dec_max
-                                      : (cmd.dec_velocity < 0.0f)
+                                      : (cmd.dec_speed < 0.0f)
                                             ? motors_state.limits.dec_min
                                             : motors_state.dec_position;
 
@@ -446,8 +446,8 @@ static void slewing_loop(void) {
 
         /* 3. Recalculate ramped velocities (throttled to every ~5 ms). */
         if (now - last_ramp_recalc_us > 5000) {
-            int target_vel_ra = (int) (motors_state.ra_velocity * 100.0f);
-            int target_vel_dec = (int) (motors_state.dec_velocity * 100.0f);
+            int target_vel_ra = (int) (motors_state.ra_speed * 100.0f);
+            int target_vel_dec = (int) (motors_state.dec_speed * 100.0f);
             int position_ra = (int) (motors_state.ra_position * 100.0f);
             int position_dec = (int) (motors_state.dec_position * 100.0f);
 
@@ -539,7 +539,7 @@ static void slewing_loop(void) {
  * -------------------------------------------------------------------------- */
 static void tracking_loop(void) {
     float deg_per_step = motors_get_deg_per_microstep();
-    uint32_t period_us = step_period_us(motors_state.ra_velocity);
+    uint32_t period_us = step_period_us(motors_state.ra_speed);
 
     /*
      * Fine-wait margin: sleep via vTaskDelay until this many µs before

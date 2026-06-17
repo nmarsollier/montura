@@ -96,10 +96,10 @@ MountResult mount_set_tracking(TrackingMode tracking);
  * coordinates. Parameters:
  *  - `ra` (hours): right ascension in hours.
  *  - `dec` (degrees): declination in degrees.
- *  - `speed` (arbitrary int): requested speed profile (module may ignore).
+ *  - `speed_rate` (1..4): requested speed profile (higher = faster).
  * Returns a MountResult describing acceptance or rejection.
  */
-MountResult mount_goto(float ra, float dec, int speed);
+MountResult mount_goto(float ra, float dec, int speed_rate);
 
 /*
  * mount_stop
@@ -161,19 +161,19 @@ MountResult mount_home(void);
  *  - `speed`: requested speed profile (module may enforce limits).
  * This is the public single-axis move API and returns acceptance info.
  */
-MountResult mount_move_axis_ra(float degrees, int speed);
+MountResult mount_move_axis_ra(float degrees, int speed_rate);
 
-MountResult mount_move_axis_dec(float degrees, int speed);
+MountResult mount_move_axis_dec(float degrees, int speed_rate);
 
 /*
- * mount_move_axis_velocity
+ * mount_move_axis_speed
  * ------------------------
  * Move one or both axes continuously at the given rates in deg/s until
  * a subsequent call with both rates = 0 (or STOP / PARK) halts motion.
  * Positive = forward, negative = reverse.  Used by Alpaca MoveAxis and
  * manual centering controls.
  */
-MountResult mount_set_move_axis_velocity(float rate_ra, float rate_dec);
+MountResult mount_set_move_axis_speed(float ra_speed, float dec_speed);
 
 /*
  * Set the mount's axis position directly (no physical move).

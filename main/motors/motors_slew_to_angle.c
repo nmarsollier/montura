@@ -1,11 +1,9 @@
 /* Motors - motors_slew_to_angle.c
  *
- * Purpose: move one or both axes to absolute angles (degrees).
+ * Purpose: move both axes to absolute axis angles (degrees).
  *
- * When tracking is active the caller pauses it, enqueues a SLEW,
- * and then enqueues a TRACK to resume after the slew completes.
- * Status and tracking are set by process_command() in the motion
- * task — no soft gates needed.
+ * Pauses and resumes tracking automatically.  Target validation
+ * happens here; the motion task only executes the commanded move.
  */
 #include "motors.h"
 #include "motors_internal.h"
@@ -14,71 +12,21 @@
 
 static const char *TAG = "MOTORS_SLEW_TO_ANGLE";
 
-MotorResultCode motors_slew_axis_to_angle_ra(float degrees, float speed, float lat) {
-    TrackingMode currTracking = TRACKING_NONE;
-    if (motors_state.status == MOTORS_STATUS_TRACKING
-        && motors_state.tracking != TRACKING_NONE) {
-        currTracking = motors_state.tracking;
-        motors_stop();
-    }
-
-    float actual_speed = motors_get_slewing_speed((int) speed);
-
-    if (!motors_is_valid_ra(degrees)) {
-        ESP_LOGW(TAG, "Rejected RA move: out of range (%.3f)", degrees);
-        return MOTOR_ERR_OUT_OF_RANGE;
-    }
-    motors_state.ra_velocity = actual_speed;
-
-    MotionCommand cmd = {
-        .type = MOTION_CMD_SLEW,
-        .ra_target_deg = degrees,
-        .dec_target_deg = motors_state.dec_position,
-        .ra_velocity = actual_speed,
-        .dec_velocity = motors_state.dec_velocity,
-    };
-    motors_queue_send(&cmd);
-
-    if (currTracking != TRACKING_NONE) {
-        motors_start_tracking(currTracking, lat);
-    }
-
-    return MOTOR_OK;
-}
-
-MotorResultCode motors_slew_axis_to_angle_dec(float degrees, float speed, float lat) {
-    TrackingMode currTracking = TRACKING_NONE;
-    if (motors_state.status == MOTORS_STATUS_TRACKING
-        && motors_state.tracking != TRACKING_NONE) {
-        currTracking = motors_state.tracking;
-        motors_stop();
-    }
-
-    float actual_speed = motors_get_slewing_speed((int) speed);
-
-    if (!motors_is_valid_dec(degrees)) {
-        ESP_LOGW(TAG, "Rejected DEC move: out of range (%.3f)", degrees);
-        return MOTOR_ERR_OUT_OF_RANGE;
-    }
-    motors_state.dec_velocity = actual_speed;
-
-    MotionCommand cmd = {
-        .type = MOTION_CMD_SLEW,
-        .ra_target_deg = motors_state.ra_position,
-        .dec_target_deg = degrees,
-        .ra_velocity = motors_state.ra_velocity,
-        .dec_velocity = actual_speed,
-    };
-    motors_queue_send(&cmd);
-
-    if (currTracking != TRACKING_NONE) {
-        motors_start_tracking(currTracking, lat);
-    }
-
-    return MOTOR_OK;
-}
-
-MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed, float lat) {
+/*
+ * Move both axes to absolute axis angles in degrees.
+ *
+ * Validates both targets against axis limits before enqueuing the SLEW
+ * command.  If tracking is active it is paused for the slew and
+ * automatically resumed afterwards — the caller does not need to
+ * manage tracking state.
+ *
+ * Parameters:
+ *   ra_deg   — target RA axis angle in degrees (validated against limits)
+ *   dec_deg  — target DEC axis angle in degrees
+ *   speed_rate — slew profile (1=2°/s, 2=8°/s, 3=16°/s, default=24°/s)
+ *   lat      — site latitude (used to restore tracking direction)
+ */
+MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_rate, float lat) {
     TrackingMode currTracking = TRACKING_NONE;
     if (motors_state.status == MOTORS_STATUS_TRACKING
         && motors_state.tracking != TRACKING_NONE) {
@@ -96,17 +44,17 @@ MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed, f
         return MOTOR_ERR_OUT_OF_RANGE;
     }
 
-    float actual_speed = motors_get_slewing_speed((int) speed);
+    float speed = motors_get_slewing_speed((int) speed_rate);
 
-    motors_state.ra_velocity = actual_speed;
-    motors_state.dec_velocity = actual_speed;
+    motors_state.ra_speed = speed;
+    motors_state.dec_speed = speed;
 
     MotionCommand cmd = {
         .type = MOTION_CMD_SLEW,
         .ra_target_deg = ra_deg,
         .dec_target_deg = dec_deg,
-        .ra_velocity = actual_speed,
-        .dec_velocity = actual_speed,
+        .ra_speed = speed,
+        .dec_speed = speed,
     };
     motors_queue_send(&cmd);
 

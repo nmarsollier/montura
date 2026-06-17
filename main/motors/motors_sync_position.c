@@ -28,8 +28,8 @@ void motors_sync_position(float ra_axis_deg, float dec_axis_deg) {
 
         MotionCommand cmd = {
             .type = MOTION_CMD_TRACK,
-            .ra_velocity = motors_state.ra_velocity,
-            .dec_velocity = motors_state.dec_velocity,
+            .ra_speed = motors_state.ra_speed,
+            .dec_speed = motors_state.dec_speed,
             .tracking_mode = saved_mode,
         };
         motors_queue_send(&cmd);

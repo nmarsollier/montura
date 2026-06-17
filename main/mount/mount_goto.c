@@ -7,7 +7,7 @@
 
 #include "motors.h"
 
-MountResult mount_goto(float ra, float dec, int speed) {
+MountResult mount_goto(float ra, float dec, int speed_rate) {
     EquatorialCoordinates eq = {
         .ra_hours = ra,
         .dec_deg = dec
@@ -15,7 +15,7 @@ MountResult mount_goto(float ra, float dec, int speed) {
 
     AxisCoordinates axis = equatorial_to_axis(eq);
 
-    MotorResultCode rc1 = motors_slew_to_angle(axis.ra_axis_deg, axis.dec_axis_deg, speed, mount_internal_state.lat);
+    MotorResultCode rc1 = motors_slew_to_angle(axis.ra_axis_deg, axis.dec_axis_deg, speed_rate, mount_internal_state.lat);
 
     if (rc1 != MOTOR_OK) {
         return mount_result_error("Failed to start GOTO");

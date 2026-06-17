@@ -3,6 +3,7 @@
  * Purpose: return a copy of the authoritative motors state.
  */
 #include "motors.h"
+#include "motors_internal.h"
 
 /*
  * Return a snapshot copy of the motors module's authoritative state.

@@ -36,7 +36,7 @@ void rest_server_start(void) {
 
     rest_register_post(server, "/api/tracking", rest_tracking_handler);
     rest_register_post(server, "/api/move-axis", rest_move_axis_handler);
-    rest_register_post(server, "/api/move-axis-velocity", rest_move_axis_velocity_handler);
+    rest_register_post(server, "/api/move-axis-speed", rest_move_axis_speed_handler);
     rest_register_post(server, "/api/goto", rest_goto_handler);
     rest_register_post(server, "/api/stop", rest_stop_handler);
     rest_register_post(server, "/api/park", rest_park_handler);

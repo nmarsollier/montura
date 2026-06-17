@@ -23,7 +23,7 @@ esp_err_t rest_tracking_handler(httpd_req_t *request);
 esp_err_t rest_goto_handler(httpd_req_t *request);
 
 esp_err_t rest_move_axis_handler(httpd_req_t *request);
-esp_err_t rest_move_axis_velocity_handler(httpd_req_t *request);
+esp_err_t rest_move_axis_speed_handler(httpd_req_t *request);
 
 esp_err_t rest_stop_handler(httpd_req_t *request);
 

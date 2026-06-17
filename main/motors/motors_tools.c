@@ -3,6 +3,7 @@
  * Purpose: motors enum/string helpers and state utilities.
  */
 #include "motors.h"
+#include "motors_internal.h"
 #include "utils/utils.h"
 #include <string.h>
 

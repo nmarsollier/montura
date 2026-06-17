@@ -27,8 +27,8 @@ typedef struct {
     MotionCommandType type;
     float ra_target_deg;
     float dec_target_deg;
-    float ra_velocity;
-    float dec_velocity;
+    float ra_speed;
+    float dec_speed;
     TrackingMode tracking_mode;
     bool relative;
     float ra_delta_deg;
@@ -124,6 +124,14 @@ void motors_hw_set_direction_dec(MotorDirection direction);
 void motors_hw_step_ra(void);
 
 void motors_hw_step_dec(void);
+
+/* =========================================================================
+ * Module-global state — motors_state is the single source of truth for
+ * the motors layer.  External code reads it through motors_current_state().
+ * ========================================================================= */
+extern MotorsState motors_state;
+
+float motors_get_tracking_speed(TrackingMode mode);
 
 /* =========================================================================
  * Task & queue lifecycle (motors_task.c, motors_queue.c).

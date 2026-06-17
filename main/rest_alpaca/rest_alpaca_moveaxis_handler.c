@@ -38,7 +38,7 @@ esp_err_t alpaca_moveaxis_handler(httpd_req_t *req) {
         s_dec_rate = fmaxf(fminf(rate, hi), 0.0f);
     }
 
-    MountResult result = mount_set_move_axis_velocity(s_ra_rate, s_dec_rate);
+    MountResult result = mount_set_move_axis_speed(s_ra_rate, s_dec_rate);
     if (result.ok) alpaca_response_ok(req, cid, stx);
     else alpaca_response_error(req, 1025, result.message, cid, stx);
     return ESP_OK;

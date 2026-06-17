@@ -8,8 +8,8 @@
  * Objective: support Alpaca MoveAxis (joystick-style controls) where the
  * client sends a rate and expects continuous motion until rate = 0.
  */
-MountResult mount_set_move_axis_velocity(float rate_ra, float rate_dec) {
-    if ((int) rate_ra == 0 && (int) rate_dec == 0) {
+MountResult mount_set_move_axis_speed(float ra_speed, float dec_speed) {
+    if ((int) ra_speed == 0 && (int) dec_speed == 0) {
         return mount_stop();
     }
 
@@ -21,7 +21,7 @@ MountResult mount_set_move_axis_velocity(float rate_ra, float rate_dec) {
         mount_stop();
     }
 
-    motors_set_move_axis_velocity(rate_ra, rate_dec);
+    motors_set_move_axis_speed(ra_speed, dec_speed);
 
     return mount_result_ok();
 }
