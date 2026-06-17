@@ -2,19 +2,14 @@
  *
  * Purpose: stop all motor movement immediately.
  *
- * Resets the command queue and sends a single fresh STOP.
- * process_command() in the motion task sets status = READY
- * when it dequeues the STOP.
+ * Stops the motion loop and updates state directly — no queue round-trip.
  */
 #include "motors.h"
 #include "motors_internal.h"
 
 void motors_stop(void) {
     motors_queue_clear();
-
-    MotionCommand cmd = {
-        .type = MOTION_CMD_STOP,
-        .tracking_mode = TRACKING_NONE,
-    };
-    motors_queue_send(&cmd);
+    motors_motion_stop();
+    motors_state.status = MOTORS_STATUS_READY;
+    motors_state.tracking = TRACKING_NONE;
 }

@@ -10,18 +10,17 @@
  *
  * External callers (REST handlers, button poller) send MotionCommand
  * structs to the queue.  The motors task is the sole consumer and the
- * sole writer of motors_state position / status / tracking fields.
+ * sole writer of motors_state position fields.
+ *
+ * Only motion-producing commands go through the queue.  Stop / park /
+ * disable / enable are handled directly by their callers via
+ * motors_motion_stop() + motors_state update — no queue round-trip.
  * ========================================================================= */
 
 typedef enum {
-    MOTION_CMD_STOP = 0, /* preempts everything      */
-    MOTION_CMD_PARK, /* preempts everything      */
-    MOTION_CMD_DISABLE, /* preempts everything      */
-    MOTION_CMD_SLEW, /* preempts TRACK/MOVE_AXIS */
-    MOTION_CMD_TRACK, /* normal                   */
-    MOTION_CMD_MOVE_AXIS, /* normal                   */
-    MOTION_CMD_ENABLE, /* normal                   */
-    MOTION_CMD_SYNC, /* lowest — align targets   */
+    MOTION_CMD_SLEW = 0,
+    MOTION_CMD_TRACK,
+    MOTION_CMD_MOVE_AXIS,
 } MotionCommandType;
 
 typedef struct {
@@ -129,6 +128,10 @@ void motors_hw_step_dec(void);
 /* =========================================================================
  * Task & queue lifecycle (motors_task.c, motors_queue.c).
  * ========================================================================= */
+
+/* Stop the active motion loop from outside the motion task.
+ * Safe to call from any task — the loop exits at its next iteration. */
+void motors_motion_stop(void);
 
 /* Apply a sync immediately — updates motors_state and internal targets. */
 void motors_motion_sync_apply(float ra_axis_deg, float dec_axis_deg);

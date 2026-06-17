@@ -7,12 +7,9 @@
 #include "motors_internal.h"
 
 void motors_enable(void) {
-    motors_hw_enable();
     motors_queue_clear();
-
-    MotionCommand cmd = {
-        .type = MOTION_CMD_ENABLE,
-        .tracking_mode = TRACKING_NONE,
-    };
-    motors_queue_send(&cmd);
+    motors_motion_stop();
+    motors_hw_enable();
+    motors_state.status = MOTORS_STATUS_READY;
+    motors_state.tracking = TRACKING_NONE;
 }

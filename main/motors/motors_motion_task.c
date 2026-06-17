@@ -230,12 +230,11 @@ static bool step_axis_dec(float target_deg, float deg_per_step) {
 }
 
 /* --------------------------------------------------------------------------
- * Only STOP / PARK / DISABLE may interrupt a running motion loop.
+ * Stop the active motion loop from outside the motion task.
+ * Safe to call from any task — the loop exits at its next iteration.
  * -------------------------------------------------------------------------- */
-static bool is_terminal_command(MotionCommandType type) {
-    return type == MOTION_CMD_STOP
-           || type == MOTION_CMD_PARK
-           || type == MOTION_CMD_DISABLE;
+void motors_motion_stop(void) {
+    s_motion.motion_active = false;
 }
 
 /* --------------------------------------------------------------------------
@@ -282,8 +281,9 @@ static bool check_motion_conditions(float deg_per_step) {
 /* --------------------------------------------------------------------------
  * Command processing — handle one MotionCommand and set up motion state.
  *
- * This is the ONLY place where motors_state transitions occur for
- * operational commands (SLEW, TRACK, STOP, PARK, etc.).
+ * Only motion-producing commands (SLEW, TRACK, MOVE_AXIS) go through
+ * the queue.  Stop / park / disable / enable / sync are handled directly
+ * by their callers via motors_motion_stop() + motors_state update.
  * -------------------------------------------------------------------------- */
 static void process_command(MotionCommand cmd) {
     s_motion.active_cmd_type = cmd.type;
@@ -356,47 +356,6 @@ static void process_command(MotionCommand cmd) {
 
             break;
 
-        case MOTION_CMD_STOP:
-            s_motion.motion_active = false;
-            motors_state.status = MOTORS_STATUS_READY;
-            motors_state.tracking = TRACKING_NONE;
-            break;
-
-        case MOTION_CMD_PARK:
-            s_motion.motion_active = false;
-            motors_state.status = MOTORS_STATUS_PARKED;
-            motors_state.tracking = TRACKING_NONE;
-            break;
-
-        case MOTION_CMD_DISABLE:
-            s_motion.motion_active = false;
-            motors_hw_disable();
-            motors_state.status = MOTORS_STATUS_DISABLED;
-            motors_state.tracking = TRACKING_NONE;
-            break;
-
-        case MOTION_CMD_ENABLE:
-            s_motion.motion_active = false;
-            motors_hw_enable();
-            motors_state.status = MOTORS_STATUS_READY;
-            motors_state.tracking = TRACKING_NONE;
-            break;
-
-        case MOTION_CMD_SYNC:
-            s_motion.motion_active = false;
-            motors_state.ra_position = cmd.ra_target_deg;
-            motors_state.dec_position = cmd.dec_target_deg;
-
-            /*
-             * Also align the active motion targets so a future start
-             * doesn't jump to stale coordinates.
-             */
-            s_motion.ra_target = cmd.ra_target_deg;
-            s_motion.dec_target = cmd.dec_target_deg;
-            s_motion.ra_start = cmd.ra_target_deg;
-            s_motion.dec_start = cmd.dec_target_deg;
-
-            break;
     }
 }
 
@@ -482,29 +441,6 @@ static void slewing_loop(void) {
         if (now - last_check_us >= 500) {
             last_check_us = now;
 
-            MotionCommand cmd;
-            /*
-             * Peek (don't consume) so commands that don't preempt stay
-             * in the queue for the next motion.  Only xQueueReceive
-             * when we're actually going to process the command.
-             */
-            if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
-                if (is_terminal_command(cmd.type)) {
-                    xQueueReceive(motion_cmd_queue, &cmd, 0);
-                    process_command(cmd);
-                    if (!s_motion.motion_active) return;
-                    next_ra_us = esp_timer_get_time();
-                    next_dec_us = next_ra_us;
-                    last_ramp_recalc_us = 0;
-                    /* Refresh cached values after command switch. */
-                    deg_per_step = motors_get_deg_per_microstep();
-                    half_step = deg_per_step * 0.5f;
-                    distance_ra = (int) (fabsf(s_motion.ra_target - s_motion.ra_start) * 100.0f);
-                    distance_dec = (int) (fabsf(s_motion.dec_target - s_motion.dec_start) * 100.0f);
-                    continue;
-                }
-            }
-
             if (!check_motion_conditions(deg_per_step)) break;
         }
 
@@ -565,18 +501,6 @@ static void slewing_loop(void) {
              */
             while (esp_timer_get_time() < next_step) {
                 if ((esp_timer_get_time() & 0x1FF) == 0) {
-                    MotionCommand preempt_cmd;
-                    if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                        if (is_terminal_command(preempt_cmd.type)) {
-                            xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
-                            process_command(preempt_cmd);
-                            if (!s_motion.motion_active) return;
-                            next_ra_us = esp_timer_get_time();
-                            next_dec_us = next_ra_us;
-                            last_ramp_recalc_us = 0;
-                            break; /* exit inner spin, re-enter outer loop */
-                        }
-                    }
                     taskYIELD();
                 }
             }
@@ -639,35 +563,13 @@ static void tracking_loop(void) {
         }
 
         /* ------------------------------------------------------------------
-         * Throttled preemption & conditions check (every ~500 us).
+         * Throttled conditions check (every ~500 us).
          * ------------------------------------------------------------------ */
         if (now - last_check_us >= 500) {
             last_check_us = now;
 
-            MotionCommand cmd;
-            if (xQueuePeek(motion_cmd_queue, &cmd, 0) == pdTRUE) {
-                if (is_terminal_command(cmd.type)) {
-                    xQueueReceive(motion_cmd_queue, &cmd, 0);
-                    process_command(cmd);
-                    if (!s_motion.motion_active) return;
-
-                    /* Reload tracking parameters for the new command. */
-                    deg_per_step = motors_get_deg_per_microstep();
-                    period_us = step_period_us(motors_state.ra_velocity);
-                    accumulator = 0.0;
-                    last_time_us = esp_timer_get_time();
-                    last_check_us = last_time_us;
-                    continue;
-                }
-            }
-
             if (!check_motion_conditions(deg_per_step)) break;
 
-            /*
-             * If a preempting command (e.g. SLEW) changed the status
-             * from TRACKING to something else, exit so motion_loop()
-             * redispatches to the correct loop (slewing_loop).
-             */
             if (motors_state.status != MOTORS_STATUS_TRACKING ||
                 motors_state.tracking == TRACKING_NONE) {
                 break;
@@ -732,22 +634,6 @@ static void tracking_loop(void) {
          */
         while (esp_timer_get_time() < deadline) {
             if ((esp_timer_get_time() & 0x1FF) == 0) {
-                MotionCommand preempt_cmd;
-                if (xQueuePeek(motion_cmd_queue, &preempt_cmd, 0) == pdTRUE) {
-                    if (is_terminal_command(preempt_cmd.type)) {
-                        xQueueReceive(motion_cmd_queue, &preempt_cmd, 0);
-                        process_command(preempt_cmd);
-                        if (!s_motion.motion_active) return;
-
-                        /* Reload tracking parameters for the new command. */
-                        deg_per_step = motors_get_deg_per_microstep();
-                        period_us = step_period_us(motors_state.ra_velocity);
-                        accumulator = 0.0;
-                        last_time_us = esp_timer_get_time();
-                        last_check_us = last_time_us;
-                        break; /* exit fine-wait, re-enter outer loop */
-                    }
-                }
                 taskYIELD(); /* reset task WDT, let other tasks run */
             }
         }
@@ -777,8 +663,8 @@ static void motion_loop(void) {
  * Blocks on the command queue when idle. When a motion-producing command
  * arrives (SLEW, TRACK, or MOVE_AXIS), enters motion_loop() which dispatches
  * to the appropriate execution path.
- * Non-motion commands (STOP, PARK, SYNC, etc.) are handled inline and
- * the task returns to blocking on the queue.
+ * Stop / park / disable / enable / sync are handled directly by their
+ * callers via motors_motion_stop() + motors_state update.
  * -------------------------------------------------------------------------- */
 static void motors_motion_task_run(void *arg) {
     (void) arg;
