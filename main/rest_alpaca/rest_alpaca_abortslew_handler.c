@@ -4,7 +4,7 @@
 
 /* Alpaca — Method — AbortSlew
  *
- * Purpose: Immediately stops any ongoing slew or goto.
+ * Purpose: Immediately stops any ongoing slew.
  *
  * Alpaca usage: Called by N.I.N.A. when the user presses Stop or a safety limit triggers.
  */

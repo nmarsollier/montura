@@ -18,7 +18,7 @@ void rest_alpaca_server_start(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = 11111;
     config.max_uri_handlers = 128;
-    config.max_open_sockets = 7;
+    config.max_open_sockets = 14;
     config.lru_purge_enable = true;
     config.ctrl_port = 32769;
 

@@ -26,7 +26,7 @@ static const char *TAG = "MOTORS_SLEW_TO_ANGLE";
  *   speed_rate — slew profile (1=2°/s, 2=8°/s, 3=16°/s, default=24°/s)
  *   lat      — site latitude (used to restore tracking direction)
  */
-MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_rate, float lat) {
+MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, int speed_rate, float lat) {
     TrackingMode currTracking = TRACKING_NONE;
     if (motors_state.status == MOTORS_STATUS_TRACKING
         && motors_state.tracking != TRACKING_NONE) {
@@ -44,7 +44,7 @@ MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_ra
         return MOTOR_ERR_OUT_OF_RANGE;
     }
 
-    float speed = motors_get_slewing_speed((int) speed_rate);
+    float speed = motors_get_slewing_speed(speed_rate);
 
     motors_state.ra_speed = speed;
     motors_state.dec_speed = speed;
@@ -59,7 +59,7 @@ MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_ra
     motors_queue_put(&cmd);
 
     if (currTracking != TRACKING_NONE) {
-        motors_start_tracking(currTracking, lat);
+        motors_start_tracking(currTracking);
     }
 
     return MOTOR_OK;

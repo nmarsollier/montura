@@ -9,7 +9,7 @@
 typedef enum {
     /* Ready to accept slews/tracking requests. */
     MOTORS_STATUS_READY,
-    /* Performing a user-initiated slew or goto. */
+    /* Performing a user-initiated slew to coordinates. */
     MOTORS_STATUS_SLEWING,
     /* Continuous tracking is active. */
     MOTORS_STATUS_TRACKING,
@@ -98,14 +98,9 @@ void motors_park(void);
 void motors_home(float lat);
 
 /*
- * Update the motors module authoritative axis positions.
- */
-void motors_sync_position(float ra_axis_deg, float dec_axis_deg);
-
-/*
  * Start continuous tracking according to the chosen `TrackingMode`.
  */
-MotorResultCode motors_start_tracking(TrackingMode mode, float lat);
+MotorResultCode motors_start_tracking(TrackingMode mode);
 
 /*
  * Move one or both axes continuously at the given rates in deg/s.
@@ -132,7 +127,7 @@ TrackingMode tracking_from_string(const char *value);
 const char *tracking_valid_values(void);
 
 /* Move both axes to absolute angles in degrees. */
-MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, float speed_rate, float lat);
+MotorResultCode motors_slew_to_angle(float ra_deg, float dec_deg, int speed_rate, float lat);
 
 MotorResultCode motors_slew_axis_ra(float degrees, int speed_rate, float lat);
 

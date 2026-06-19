@@ -1,6 +1,6 @@
-/* REST - rest_goto_handler.c
+/* REST - rest_slew_to_coordinates_handler.c
  *
- * Purpose: handle GOTO requests.
+ * Purpose: handle slew-to-coordinates requests.
  */
 #include "rest.h"
 
@@ -11,13 +11,7 @@
 
 #include "utils/utils.h"
 
-/*
- * Business use case: expose GOTO via the API with input validation.
- *
- * Objective: accept target coordinates from external clients and convert them
- * into a safe movement request.
- */
-esp_err_t rest_goto_handler(httpd_req_t *request) {
+esp_err_t rest_slew_to_coordinates_handler(httpd_req_t *request) {
     HttpRequestBody body = http_request_read_body(request);
     JsonFloatResult ra = json_get_float(body.value, "ra");
     JsonFloatResult dec = json_get_float(body.value, "dec");
@@ -45,7 +39,7 @@ esp_err_t rest_goto_handler(httpd_req_t *request) {
         speed_rate_value = speed_rate.value;
     }
 
-    rest_send_result(request, mount_goto(ra.value, dec.value, speed_rate_value));
+    rest_send_result(request, mount_slew_to_coordinates(ra.value, dec.value, speed_rate_value));
 
     return ESP_OK;
 }

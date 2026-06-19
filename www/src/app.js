@@ -1,6 +1,8 @@
 function mountApp() {
     return {
         status: {ra: '--:--:--', dec: '--:--:--'},
+        lst: '--:--:--',
+        pierSide: '--',
         statusText: 'UNKNOWN',
         settings: {lat: 0, lon: 0, elevation: 0},
         mountTime: '--',
@@ -9,7 +11,7 @@ function mountApp() {
         errorTimer: null,
         slew: {degrees: 5, speed: 4},
         wifi: {ssid: '', password: ''},
-        goto: {ra: {h: 0, m: 0, s: 0}, dec: {d: 0, m: 0, s: 0}, speed: 4},
+        slewTarget: {ra: {h: 0, m: 0, s: 0}, dec: {d: 0, m: 0, s: 0}, speed: 4},
         serverTracking: 'none',
         wifiAp: false,
         isHome: false,
@@ -45,6 +47,8 @@ function mountApp() {
             fetch('/api/status').then(r => r.json()).then(j => {
                 this.statusText = j.status || 'UNKNOWN';
                 this.status = {ra: j.ra || '--:--:--', dec: j.dec || '--:--:--'};
+                this.lst = j.lst || '--:--:--';
+                this.pierSide = j.pier_side || '--';
                 this.mountTime = j.time || '--';
                 this.serverTracking = j.tracking || 'none';
                 this.wifiAp = j.wifi_ap || false;
@@ -113,13 +117,13 @@ function mountApp() {
                 .then(() => this.fetchStatus());
         },
 
-        doGoto() {
-            const rh = this.goto.ra.h;
-            const rm = this.goto.ra.m;
-            const rs = this.goto.ra.s;
-            const dd = this.goto.dec.d;
-            const dm = this.goto.dec.m;
-            const ds = this.goto.dec.s;
+        doSlewToCoordinates() {
+            const rh = this.slewTarget.ra.h;
+            const rm = this.slewTarget.ra.m;
+            const rs = this.slewTarget.ra.s;
+            const dd = this.slewTarget.dec.d;
+            const dm = this.slewTarget.dec.m;
+            const ds = this.slewTarget.dec.s;
 
             if (isNaN(rh) || rh < 0 || rh > 23 || isNaN(rm) || rm < 0 || rm > 59 || isNaN(rs) || rs < 0 || rs >= 60) {
                 this.showError('RA inválida — H: 0–23, M: 0–59, S: 0–59.999');
@@ -134,7 +138,7 @@ function mountApp() {
             const absDec = Math.abs(dd) + dm / 60 + ds / 3600;
             const decDeg = dd < 0 ? -absDec : absDec;
 
-            this.apiPost('/api/goto', {ra: raHours, dec: decDeg, speed: this.goto.speed})
+            this.apiPost('/api/slew-to-coordinates', {ra: raHours, dec: decDeg, speed: this.slewTarget.speed})
                 .then(() => this.fetchStatus());
         },
 

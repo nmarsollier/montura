@@ -141,9 +141,6 @@ float motors_get_tracking_speed(TrackingMode mode);
  * Safe to call from any task — the loop exits at its next iteration. */
 void motors_motion_stop(void);
 
-/* Apply a sync immediately — updates motors_state and internal targets. */
-void motors_motion_sync_apply(float ra_axis_deg, float dec_axis_deg);
-
 void motors_motion_task_init(void);
 
 void motors_queue_init(void);

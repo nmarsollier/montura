@@ -20,7 +20,7 @@ void rest_server_start(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 18;
-    config.max_open_sockets = 5;
+    config.max_open_sockets = 4;
     config.lru_purge_enable = true;
     config.ctrl_port = 32768;
 
@@ -37,12 +37,11 @@ void rest_server_start(void) {
     rest_register_post(server, "/api/tracking", rest_tracking_handler);
     rest_register_post(server, "/api/move-axis", rest_move_axis_handler);
     rest_register_post(server, "/api/move-axis-speed", rest_move_axis_speed_handler);
-    rest_register_post(server, "/api/goto", rest_goto_handler);
+    rest_register_post(server, "/api/slew-to-coordinates", rest_slew_to_coordinates_handler);
     rest_register_post(server, "/api/stop", rest_stop_handler);
     rest_register_post(server, "/api/park", rest_park_handler);
     rest_register_post(server, "/api/home", rest_home_handler);
     rest_register_post(server, "/api/unpark", rest_unpark_handler);
-    rest_register_post(server, "/api/sync", rest_sync_handler);
     rest_register_post(server, "/api/settings", rest_settings_handler);
     rest_register_post(server, "/api/wifi-config", rest_wifi_handler);
 

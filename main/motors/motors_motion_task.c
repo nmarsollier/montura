@@ -198,7 +198,7 @@ static bool step_axis_ra(float target_deg, float deg_per_step) {
     }
 
     if (!s_motion.motion_active) {
-        return false; /* sync stopped motion mid-iteration */
+        return false; /* motion stopped externally */
     }
 
     motors_hw_set_direction_ra(direction);
@@ -220,7 +220,7 @@ static bool step_axis_dec(float target_deg, float deg_per_step) {
     }
 
     if (!s_motion.motion_active) {
-        return false; /* sync stopped motion mid-iteration */
+        return false; /* motion stopped externally */
     }
 
     motors_hw_set_direction_dec(direction);
@@ -282,7 +282,7 @@ static bool check_motion_conditions(float deg_per_step) {
  * Command processing — handle one MotionCommand and set up motion state.
  *
  * Only motion-producing commands (SLEW, TRACK, MOVE_AXIS) go through
- * the queue.  Stop / park / disable / enable / sync are handled directly
+ * the queue.  Stop / park / disable / enable are handled directly
  * by their callers via motors_motion_stop() + motors_state update.
  * -------------------------------------------------------------------------- */
 static void process_command(MotionCommand cmd) {
@@ -360,24 +360,6 @@ static void process_command(MotionCommand cmd) {
 }
 
 /* --------------------------------------------------------------------------
- * Synchronous position sync — called directly from the REST / mount layer.
- * Updates motors_state and internal targets without going through the queue
- * so mount_sync can return OK only after the position has been applied.
- * -------------------------------------------------------------------------- */
-void motors_motion_sync_apply(float ra_axis_deg, float dec_axis_deg) {
-    /* Stop any active motion — prevents the loop from fighting the update. */
-    s_motion.motion_active = false;
-
-    motors_state.ra_position = ra_axis_deg;
-    motors_state.dec_position = dec_axis_deg;
-
-    s_motion.ra_target = ra_axis_deg;
-    s_motion.dec_target = dec_axis_deg;
-    s_motion.ra_start = ra_axis_deg;
-    s_motion.dec_start = dec_axis_deg;
-}
-
-/* --------------------------------------------------------------------------
  * Slewing & move-axis motion loop — incremental step scheduling.
  *
  * Selects the appropriate wait strategy each iteration:
@@ -444,19 +426,28 @@ static void slewing_loop(void) {
             if (!check_motion_conditions(deg_per_step)) break;
         }
 
-        /* 3. Recalculate ramped velocities (throttled to every ~5 ms). */
+        /* 3. Recalculate velocities (throttled to every ~5 ms).
+         *
+         * MOVE_AXIS (joystick / NINA centering) skips the ramp —
+         * constant velocity from the first microstep so the client's
+         * time × rate distance calculations are accurate. */
         if (now - last_ramp_recalc_us > 5000) {
-            int target_vel_ra = (int) (motors_state.ra_speed * 100.0f);
-            int target_vel_dec = (int) (motors_state.dec_speed * 100.0f);
-            int position_ra = (int) (motors_state.ra_position * 100.0f);
-            int position_dec = (int) (motors_state.dec_position * 100.0f);
+            if (s_motion.active_cmd_type == MOTION_CMD_MOVE_AXIS) {
+                ra_period = step_period_us(motors_state.ra_speed);
+                dec_period = step_period_us(motors_state.dec_speed);
+            } else {
+                int target_vel_ra = (int) (motors_state.ra_speed * 100.0f);
+                int target_vel_dec = (int) (motors_state.dec_speed * 100.0f);
+                int position_ra = (int) (motors_state.ra_position * 100.0f);
+                int position_dec = (int) (motors_state.dec_position * 100.0f);
 
-            float ra_vel = ramp_velocity(target_vel_ra, position_ra,
-                                         (int) (s_motion.ra_start * 100.0f), distance_ra);
-            float dec_vel = ramp_velocity(target_vel_dec, position_dec,
-                                          (int) (s_motion.dec_start * 100.0f), distance_dec);
-            ra_period = step_period_us(ra_vel);
-            dec_period = step_period_us(dec_vel);
+                float ra_vel = ramp_velocity(target_vel_ra, position_ra,
+                                             (int) (s_motion.ra_start * 100.0f), distance_ra);
+                float dec_vel = ramp_velocity(target_vel_dec, position_dec,
+                                              (int) (s_motion.dec_start * 100.0f), distance_dec);
+                ra_period = step_period_us(ra_vel);
+                dec_period = step_period_us(dec_vel);
+            }
             last_ramp_recalc_us = now;
         }
 
@@ -663,7 +654,7 @@ static void motion_loop(void) {
  * Blocks on the command queue when idle. When a motion-producing command
  * arrives (SLEW, TRACK, or MOVE_AXIS), enters motion_loop() which dispatches
  * to the appropriate execution path.
- * Stop / park / disable / enable / sync are handled directly by their
+ * Stop / park / disable / enable are handled directly by their
  * callers via motors_motion_stop() + motors_state update.
  * -------------------------------------------------------------------------- */
 static void motors_motion_task_run(void *arg) {

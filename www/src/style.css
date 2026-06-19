@@ -432,7 +432,7 @@ button.primary:hover {
 }
 
 /* ═══════════════════════════════════════════════════
-   GOTO — 3-field coordinate inputs + bottom-aligned button
+   Slew to Coordinates — 3-field coordinate inputs + bottom-aligned button
    ═══════════════════════════════════════════════════ */
 
 /* Three-field H:M:S or D:M:S row */
@@ -456,15 +456,15 @@ button.primary:hover {
     user-select: none;
 }
 
-/* Right column: push GOTO button to the bottom */
-.goto-btn-col {
+/* Right column: push SLEW button to the bottom */
+.slew-btn-col {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     align-items: center;
 }
 
-.goto-btn-col button {
+.slew-btn-col button {
     min-width: 80px;
     padding: 14px 24px;
     font-size: 16px;

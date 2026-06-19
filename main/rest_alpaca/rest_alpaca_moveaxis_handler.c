@@ -47,4 +47,5 @@ esp_err_t alpaca_moveaxis_handler(httpd_req_t *req) {
 void alpaca_moveaxis_reset(void) {
     s_ra_rate = 0.0f;
     s_dec_rate = 0.0f;
+    mount_move_axis_reset();
 }

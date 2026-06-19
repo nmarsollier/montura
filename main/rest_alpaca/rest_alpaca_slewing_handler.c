@@ -4,7 +4,7 @@
 
 /* Alpaca — Property — Slewing
  *
- * Purpose: Returns true while a slew or goto is in progress.
+ * Purpose: Returns true while a slew is in progress.
  *
  * Alpaca usage: N.I.N.A. polls this after issuing a slew; shows progress indicator.
  */

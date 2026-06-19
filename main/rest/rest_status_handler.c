@@ -28,12 +28,22 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
                     && data.ra.hours == 0 && data.ra.minutes == 0
                     && data.dec.degrees == 0 && data.dec.minutes == 0);
 
+    /* Format LST as HH:MM:SS.s from decimal hours. */
+    int lst_h = (int) data.lst_hours;
+    int lst_m = (int) ((data.lst_hours - (float) lst_h) * 60.0f);
+    float lst_s = (data.lst_hours - (float) lst_h - (float) lst_m / 60.0f) * 3600.0f;
+    if (lst_s < 0.0f) lst_s = 0.0f;
+
+    const char *pier_str = (data.pier_side == 0) ? "East" : "West";
+
     static const char format[] =
             "{"
             "\"status\":\"%s\","
             "\"tracking\":\"%s\","
             "\"ra\":\"%02d:%02d:%05.2f\","
             "\"dec\":\"%c%02d:%02d:%05.2f\","
+            "\"lst\":\"%02d:%02d:%05.2f\","
+            "\"pier_side\":\"%s\","
             "\"time\":\"%s\","
             "\"settings\":{"
             "\"lat\":%.6f,"
@@ -50,14 +60,15 @@ esp_err_t rest_status_handler(httpd_req_t *request) {
     bool wifi_ap = network_is_setup_ap_started();
 
     /*
-     * Fixed-size buffer — the JSON response fits comfortably in 512 bytes.
-     * Avoiding snprintf(NULL, 0, ...) + VLA removes the duplicate format call.
+     * Fixed-size buffer — the JSON response with LST + pier_side fits in 640 bytes.
      */
-    char response[512];
+    char response[640];
     snprintf(response, sizeof(response), format,
              status, tracking,
              data.ra.hours, data.ra.minutes, data.ra.seconds,
              dec_sign, data.dec.degrees, data.dec.minutes, data.dec.seconds,
+             lst_h, lst_m, lst_s,
+             pier_str,
              time_buf,
              data.settings.lat, data.settings.lon, data.settings.elevation,
              wifi_ap ? "true" : "false",

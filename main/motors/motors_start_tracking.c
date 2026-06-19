@@ -8,16 +8,13 @@
 #include "motors.h"
 #include "motors_internal.h"
 
-MotorResultCode motors_start_tracking(TrackingMode mode, float lat) {
+MotorResultCode motors_start_tracking(TrackingMode mode) {
     if (mode == TRACKING_NONE) {
         motors_stop();
         return MOTOR_OK;
     }
 
     float ra_speed = motors_get_tracking_speed(mode);
-
-    /* Southern hemisphere: tracking direction is reversed. */
-    if (lat < 0.0f) ra_speed = -ra_speed;
 
     motors_state.ra_speed = ra_speed;
     motors_state.dec_speed = 0.0f;

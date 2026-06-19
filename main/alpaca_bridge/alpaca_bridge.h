@@ -61,10 +61,8 @@ MountResult alpaca_bridge_set_tracking(bool enabled);
 
 void alpaca_bridge_get_tracking_rate_name(int idx, char *buf, size_t len);
 
-/* Slew / sync in equatorial coordinates. */
+/* Slew in equatorial coordinates. */
 MountResult alpaca_bridge_slew_to_coordinates(float ra_hours, float dec_deg);
-
-MountResult alpaca_bridge_sync_to_coordinates(float ra_hours, float dec_deg);
 
 MountResult alpaca_bridge_abort_slew(void);
 
@@ -78,8 +76,6 @@ void alpaca_bridge_set_target_ra(float ra_hours);
 void alpaca_bridge_set_target_dec(float dec_deg);
 
 MountResult alpaca_bridge_slew_to_target(void);
-
-MountResult alpaca_bridge_sync_to_target(void);
 
 /* Pier side (0=East, 1=West). */
 int alpaca_bridge_get_side_of_pier(void);

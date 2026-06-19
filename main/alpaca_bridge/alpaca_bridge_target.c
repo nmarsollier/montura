@@ -20,11 +20,5 @@ void alpaca_bridge_set_target_dec(float dec_deg) { alpaca_bridge_state.target_de
 MountResult alpaca_bridge_slew_to_target(void) {
     if (alpaca_bridge_state.target_ra == 0.0f && alpaca_bridge_state.target_dec == 0.0f)
         return mount_result_error("Target not set");
-    return mount_goto(alpaca_bridge_state.target_ra, alpaca_bridge_state.target_dec, 2);
-}
-
-MountResult alpaca_bridge_sync_to_target(void) {
-    if (alpaca_bridge_state.target_ra == 0.0f && alpaca_bridge_state.target_dec == 0.0f)
-        return mount_result_error("Target not set");
-    return mount_sync(alpaca_bridge_state.target_ra, alpaca_bridge_state.target_dec);
+    return mount_slew_to_coordinates(alpaca_bridge_state.target_ra, alpaca_bridge_state.target_dec, 2);
 }

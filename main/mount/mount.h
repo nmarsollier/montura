@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "motors/motors.h"
 
@@ -26,6 +27,7 @@ typedef struct {
 typedef struct {
     float ra_axis_deg;
     float dec_axis_deg;
+    int pier_side;      /* 0 = pierEast, 1 = pierWest — set by equatorial_to_axis */
 } AxisCoordinates;
 
 /* Formatted astronomical coordinate types. */
@@ -47,11 +49,14 @@ typedef struct {
     TrackingMode tracking;
     RaHMS ra;
     DecDMS dec;
+    float lst_hours;    /* Local sidereal time (hours) */
+    int pier_side;      /* 0 = pierEast (normal), 1 = pierWest (flipped) */
     MountSettings settings;
 } VisibleStatusData;
 
 /* Conversion functions between equatorial and physical axis coordinates. */
-AxisCoordinates equatorial_to_axis(EquatorialCoordinates eq);
+bool equatorial_to_axis(EquatorialCoordinates eq, AxisCoordinates current,
+                        AxisCoordinates *out);
 
 EquatorialCoordinates axis_to_equatorial(AxisCoordinates axis);
 
@@ -66,7 +71,7 @@ DecDMS dec_deg_to_dms(float dec_deg);
  * mount_init
  * ----------------
  * Initialize mount module state. Prepares internal structures so the mount
- * can accept high-level commands (goto, tracking, park/unpark). This is a
+ * can accept high-level commands (slew-to-coordinates, tracking, park/unpark). This is a
  * hardware-agnostic initialization point; it does not perform physical moves.
  */
 void mount_init(void);
@@ -90,16 +95,16 @@ VisibleStatusData mount_get_visible_status(void);
 MountResult mount_set_tracking(TrackingMode tracking);
 
 /*
- * mount_goto
- * ----------------
- * Start an asynchronous slewing operation to the requested equatorial
- * coordinates. Parameters:
+ * mount_slew_to_coordinates
+ * -------------------------
+ * Start an asynchronous slew to the requested equatorial coordinates.
+ * Parameters:
  *  - `ra` (hours): right ascension in hours.
  *  - `dec` (degrees): declination in degrees.
  *  - `speed_rate` (1..4): requested speed profile (higher = faster).
  * Returns a MountResult describing acceptance or rejection.
  */
-MountResult mount_goto(float ra, float dec, int speed_rate);
+MountResult mount_slew_to_coordinates(float ra, float dec, int speed_rate);
 
 /*
  * mount_stop
@@ -125,16 +130,6 @@ MountResult mount_park(void);
  * a MountResult describing the outcome.
  */
 MountResult mount_unpark(void);
-
-/*
- * mount_sync
- * ----------
- * Set the mount's authoritative position to the provided equatorial
- * coordinates without moving the hardware. Parameters are RA (hours) and
- * DEC (degrees). Use this to correct the internal model after manual
- * adjustments or plate-solving.
- */
-MountResult mount_sync(float ra, float dec);
 
 /*
  * mount_update_settings
@@ -175,11 +170,8 @@ MountResult mount_move_axis_dec(float degrees, int speed_rate);
  */
 MountResult mount_set_move_axis_speed(float ra_speed, float dec_speed);
 
-/*
- * Set the mount's axis position directly (no physical move).
- * Used by the HOME long-press to mark the current position as home.
- */
-MountResult mount_sync_position(float ra_axis_deg, float dec_axis_deg);
+/* Discard saved tracking state when MoveAxis is aborted externally. */
+void mount_move_axis_reset(void);
 
 /* Convert RA from HMS struct to decimal hours. */
 float mount_get_ra_hours(void);
@@ -187,5 +179,7 @@ float mount_get_ra_hours(void);
 /* Convert DEC from DMS struct to decimal degrees. */
 float mount_get_dec_deg(void);
 
-TrackingMode tracking_from_string(const char *value);
+/* Compute the current Local Sidereal Time for the configured site. */
+float mount_get_lst(void);
 
+TrackingMode tracking_from_string(const char *value);

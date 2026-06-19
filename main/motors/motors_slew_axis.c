@@ -32,7 +32,7 @@ static MotorResultCode motors_slew_axis_impl(float ra_delta_deg, float dec_delta
     motors_queue_put(&cmd);
 
     if (currTracking != TRACKING_NONE) {
-        motors_start_tracking(currTracking, lat);
+        motors_start_tracking(currTracking);
     }
     return MOTOR_OK;
 }
