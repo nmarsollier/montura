@@ -7,8 +7,8 @@
 
 #include "driver/gpio.h"
 
-#define STOP_BUTTON_GPIO GPIO_NUM_18
-#define HOME_BUTTON_GPIO GPIO_NUM_19
+#define STOP_BUTTON_GPIO GPIO_NUM_19
+#define HOME_BUTTON_GPIO GPIO_NUM_18
 
 void buttons_hw_init(void) {
     gpio_reset_pin(STOP_BUTTON_GPIO);
@@ -20,7 +20,6 @@ void buttons_hw_init(void) {
     gpio_pulldown_dis(STOP_BUTTON_GPIO);
     gpio_pulldown_dis(HOME_BUTTON_GPIO);
 }
-
 
 bool buttons_hw_is_stop_pressed(void) {
     return gpio_get_level(STOP_BUTTON_GPIO) == 0;

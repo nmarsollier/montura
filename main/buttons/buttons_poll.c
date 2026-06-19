@@ -30,14 +30,14 @@ void buttons_poll_inputs(void) {
     /* STOP: rising edge → immediate. */
     if (stop_now && !input_state.last_stop) {
         buttons_handle_stop();
-        led_on(500);
+        led_button_blink();
     }
     input_state.last_stop = stop_now;
 
     /* HOME: rising edge → immediate. */
     if (home_now && !input_state.last_home) {
         mount_home();
-        led_on(500);
+        led_button_blink();
     }
     input_state.last_home = home_now;
 }

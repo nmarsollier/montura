@@ -7,10 +7,10 @@ idf_component_register(
         "buttons/buttons_stop_handler.c"
 
         "led/led_init.c"
-        "led/led_on.c"
-        "led/led_off.c"
         "led/led_external_on.c"
         "led/led_external_off.c"
+        "led/led_button_blink.c"
+        "led/led_slew_sync.c"
 
         "motors/motors_current_state.c"
         "motors/motors_disable.c"

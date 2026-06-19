@@ -35,8 +35,8 @@ REST API  (port 80)  ── serves embedded SPA at /
 |------|-----------------|
 | 16   | TMC2209 UART RX |
 | 17   | TMC2209 UART TX |
-| 18   | STOP button     |
-| 19   | HOME button     |
+| 18   | HOME button     |
+| 19   | STOP button     |
 | 23   | Led Indicator   |
 | 25   | DEC STEP        |
 | 26   | RA STEP         |

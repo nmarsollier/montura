@@ -308,16 +308,31 @@ button.primary:hover {
     justify-content: center;
 }
 
-.dir-grid {
-    display: grid;
-    grid-template-columns: 52px 52px 52px;
-    grid-template-rows: 48px 48px 48px;
+/* Two-row axis layout: RA row + DEC row, each with ◀ label ▶ */
+.axis-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     align-items: center;
-    justify-items: center;
-    gap: 4px;
 }
 
-.dir-grid button {
+.axis-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.axis-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    min-width: 32px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.axis-grid button {
     width: 48px;
     height: 42px;
     font-size: 18px;
@@ -328,27 +343,7 @@ button.primary:hover {
     border-radius: 6px;
 }
 
-.dir-grid .center-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    color: var(--text-dim);
-    letter-spacing: .6px;
-}
-
 /* --- Joystick (continuous move) --- */
-.joy-grid {
-    display: grid;
-    grid-template-columns: 52px 52px 52px;
-    grid-template-rows: 48px 48px 48px;
-    align-items: center;
-    justify-items: center;
-    gap: 4px;
-    width: fit-content;
-    margin: 0 auto;
-}
-
 .joy-btn {
     width: 48px;
     height: 42px;
@@ -359,7 +354,7 @@ button.primary:hover {
     justify-content: center;
     border-radius: 6px;
     border: 1px solid var(--border);
-    background: var(--bg-card);
+    background: var(--btn-bg);
     color: var(--text);
     cursor: pointer;
     user-select: none;
@@ -370,14 +365,6 @@ button.primary:hover {
 .joy-btn:active {
     background: var(--accent);
     color: #fff;
-}
-
-.joy-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    color: var(--text-dim);
 }
 
 .hint {

@@ -134,16 +134,17 @@
 
             <!-- Right: Directional pad -->
             <div class="slew-pad">
-                <div class="dir-grid">
-                    <div></div>
-                    <button @click="doSlew('ra', 1)" title="RA +">▲</button>
-                    <div></div>
-                    <button @click="doSlew('dec', -1)" title="DEC −">◀</button>
-                    <div class="center-cell">RA·DEC</div>
-                    <button @click="doSlew('dec', 1)" title="DEC +">▶</button>
-                    <div></div>
-                    <button @click="doSlew('ra', -1)" title="RA −">▼</button>
-                    <div></div>
+                <div class="axis-grid">
+                    <div class="axis-row">
+                        <button @click="doSlew('ra', -1)" title="RA −">◀</button>
+                        <span class="axis-label">RA</span>
+                        <button @click="doSlew('ra', 1)" title="RA +">▶</button>
+                    </div>
+                    <div class="axis-row">
+                        <button @click="doSlew('dec', -1)" title="DEC −">◀</button>
+                        <span class="axis-label">DEC</span>
+                        <button @click="doSlew('dec', 1)" title="DEC +">▶</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -155,28 +156,25 @@
             <div class="panel-dot"></div>
             <strong>Joystick</strong> <span class="hint">(hold to move, release to stop)</span>
         </div>
-        <div class="joy-grid">
-            <div></div>
-            <button class="joy-btn"
-                    @pointerdown="joyStart('ra', 1)" @pointerup="joyStop('ra')"
-                    @pointerleave="joyStop('ra')" title="RA +">▲
-            </button>
-            <div></div>
-            <button class="joy-btn"
-                    @pointerdown="joyStart('dec', -1)" @pointerup="joyStop('dec')"
-                    @pointerleave="joyStop('dec')" title="DEC −">◀
-            </button>
-            <div class="joy-center">⏺</div>
-            <button class="joy-btn"
-                    @pointerdown="joyStart('dec', 1)" @pointerup="joyStop('dec')"
-                    @pointerleave="joyStop('dec')" title="DEC +">▶
-            </button>
-            <div></div>
-            <button class="joy-btn"
-                    @pointerdown="joyStart('ra', -1)" @pointerup="joyStop('ra')"
-                    @pointerleave="joyStop('ra')" title="RA −">▼
-            </button>
-            <div></div>
+        <div class="axis-grid">
+            <div class="axis-row">
+                <button class="joy-btn"
+                        @pointerdown="joyStart('ra', -1)" @pointerup="joyStop('ra')"
+                        @pointerleave="joyStop('ra')" title="RA −">◀</button>
+                <span class="axis-label">RA</span>
+                <button class="joy-btn"
+                        @pointerdown="joyStart('ra', 1)" @pointerup="joyStop('ra')"
+                        @pointerleave="joyStop('ra')" title="RA +">▶</button>
+            </div>
+            <div class="axis-row">
+                <button class="joy-btn"
+                        @pointerdown="joyStart('dec', -1)" @pointerup="joyStop('dec')"
+                        @pointerleave="joyStop('dec')" title="DEC −">◀</button>
+                <span class="axis-label">DEC</span>
+                <button class="joy-btn"
+                        @pointerdown="joyStart('dec', 1)" @pointerup="joyStop('dec')"
+                        @pointerleave="joyStop('dec')" title="DEC +">▶</button>
+            </div>
         </div>
     </div>
 

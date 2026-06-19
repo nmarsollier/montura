@@ -24,7 +24,7 @@ MountResult mount_set_move_axis_speed(float ra_speed, float dec_speed) {
         s_saved_tracking = saved;
     }
 
-    motors_set_move_axis_speed(ra_speed, dec_speed);
+    motors_set_move_axis_speed(-ra_speed, dec_speed);
 
     return mount_result_ok();
 }
