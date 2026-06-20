@@ -8,6 +8,7 @@
 #include "motors.h"
 
 MountResult mount_slew_to_coordinates(float ra, float dec, int speed_rate) {
+
     EquatorialCoordinates eq = {
         .ra_hours = ra,
         .dec_deg = dec
@@ -16,6 +17,7 @@ MountResult mount_slew_to_coordinates(float ra, float dec, int speed_rate) {
     MotorsState ms = motors_current_state();
     AxisCoordinates current = { .ra_axis_deg = ms.ra_position,
                                 .dec_axis_deg = ms.dec_position };
+
     AxisCoordinates axis;
     if (!equatorial_to_axis(eq, current, &axis)) {
         return mount_result_error("Target unreachable — no valid axis solution");

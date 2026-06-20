@@ -31,8 +31,8 @@
  * Both are always computed and the one with the lowest movement cost
  * from the current axis position is selected.
  *
- *   pierEast (0):  ra = +HOME_RA_OFFSET - HA,   dec =  DEC + 90
- *   pierWest (1):  ra = -HOME_RA_OFFSET - HA,   dec = -(DEC + 90)
+ *   pierEast (0):  ra = HA - HOME_RA_OFFSET,   dec =  DEC + 90
+ *   pierWest (1):  ra = HA + HOME_RA_OFFSET,   dec = -(DEC + 90)
  *
  * Computing both avoids the discontinuity at HA = 0 that would occur
  * if pier side were chosen by HA sign alone — a 0.2 astronomical
@@ -151,6 +151,7 @@ static bool axis_within_limits(float ra, float dec) {
  * -------------------------------------------------------------------------- */
 bool equatorial_to_axis(EquatorialCoordinates eq, AxisCoordinates current,
                         AxisCoordinates *out) {
+
     if (eq.dec_deg < -90.0f || eq.dec_deg > 90.0f) {
         ESP_LOGE("COORD_CONV", "Invalid DEC %.4f — rejecting", eq.dec_deg);
         return false;
@@ -173,13 +174,15 @@ bool equatorial_to_axis(EquatorialCoordinates eq, AxisCoordinates current,
     typedef struct { float ra; float dec; int pier; } Candidate;
     Candidate c[2];
 
-    /* pierEast: scope on east side of pier, pointing west. */
-    c[0].ra   = normalize_degf( HOME_RA_OFFSET_DEG - ha_deg);
+    /* pierEast: scope on east side of pier, pointing west.
+     *   ra = -(offset - HA) = HA - offset   (negated for physical motor direction) */
+    c[0].ra   = normalize_degf(ha_deg - HOME_RA_OFFSET_DEG);
     c[0].dec  = dec_base;
     c[0].pier = 0;
 
-    /* pierWest: scope on west side of pier, pointing east. */
-    c[1].ra   = normalize_degf(-HOME_RA_OFFSET_DEG - ha_deg);
+    /* pierWest: scope on west side of pier, pointing east.
+     *   ra = -(-offset - HA) = HA + offset   (negated for physical motor direction) */
+    c[1].ra   = normalize_degf(ha_deg + HOME_RA_OFFSET_DEG);
     c[1].dec  = -dec_base;
     c[1].pier = 1;
 
@@ -206,6 +209,7 @@ bool equatorial_to_axis(EquatorialCoordinates eq, AxisCoordinates current,
     out->ra_axis_deg  = c[best].ra;
     out->dec_axis_deg = c[best].dec;
     out->pier_side    = c[best].pier;
+
     return true;
 }
 
@@ -215,8 +219,8 @@ bool equatorial_to_axis(EquatorialCoordinates eq, AxisCoordinates current,
  * The pier side is reliably encoded in the sign of dec_axis because
  * DEC is linear (not normalised):
  *
- *   dec_axis >= 0  ->  pierEast  ->  HA = +offset - ra,  DEC = dec - 90
- *   dec_axis <  0  ->  pierWest  ->  HA = -offset - ra,  DEC = -dec - 90
+ *   dec_axis >= 0  ->  pierEast  ->  HA = ra + offset,  DEC = dec - 90
+ *   dec_axis <  0  ->  pierWest  ->  HA = ra - offset,  DEC = -dec - 90
  * -------------------------------------------------------------------------- */
 EquatorialCoordinates axis_to_equatorial(AxisCoordinates axis) {
     EquatorialCoordinates out;
@@ -233,12 +237,12 @@ EquatorialCoordinates axis_to_equatorial(AxisCoordinates axis) {
 
     float ha_deg, dec_deg;
     if (axis.dec_axis_deg >= 0.0f) {
-        /* pierEast: ra = +offset - HA  ->  HA = offset - ra */
-        ha_deg  = normalize_degf(HOME_RA_OFFSET_DEG - axis.ra_axis_deg);
+        /* pierEast: stored = -(offset - HA) = HA - offset  ->  HA = ra + offset */
+        ha_deg  = normalize_degf(axis.ra_axis_deg + HOME_RA_OFFSET_DEG);
         dec_deg = axis.dec_axis_deg - 90.0f;
     } else {
-        /* pierWest: ra = -offset - HA  ->  HA = -offset - ra */
-        ha_deg  = normalize_degf(-HOME_RA_OFFSET_DEG - axis.ra_axis_deg);
+        /* pierWest: stored = -(-offset - HA) = HA + offset  ->  HA = ra - offset */
+        ha_deg  = normalize_degf(axis.ra_axis_deg - HOME_RA_OFFSET_DEG);
         dec_deg = -axis.dec_axis_deg - 90.0f;
     }
 

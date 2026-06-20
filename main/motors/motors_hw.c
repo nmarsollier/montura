@@ -83,7 +83,7 @@ void motors_hw_disable(void) {
 }
 
 void motors_hw_set_direction_ra(MotorDirection direction) {
-    int dir = direction == MOTOR_DIRECTION_POSITIVE ? 1 : 0;
+    int dir = direction == MOTOR_DIRECTION_POSITIVE ? 0 : 1;
     if (last_dir_ra != dir) {
         last_dir_ra = dir;
         gpio_set_level(RA_DIR_GPIO, dir);

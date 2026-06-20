@@ -16,12 +16,9 @@ MotorResultCode motors_start_tracking(TrackingMode mode) {
 
     float ra_speed = motors_get_tracking_speed(mode);
 
-    motors_state.ra_speed = ra_speed;
-    motors_state.dec_speed = 0.0f;
-
     MotionCommand cmd = {
         .type = MOTION_CMD_TRACK,
-        .ra_target_deg = 0.0f,   /* set by the task from limits */
+        .ra_target_deg = 0.0f, /* set by the task from limits */
         .dec_target_deg = 0.0f,
         .ra_speed = ra_speed,
         .dec_speed = 0.0f,
