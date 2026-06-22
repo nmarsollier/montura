@@ -8,7 +8,6 @@ void network_start(void);
 
 void network_sntp_start(void);
 
-extern bool setup_ap_started;
 extern bool wifi_started;
 extern int  wifi_retry_count;
 

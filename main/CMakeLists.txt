@@ -3,10 +3,9 @@ idf_component_register(
         "main.c"
 
         "led/led_init.c"
-        "led/led_external_on.c"
-        "led/led_external_off.c"
-        "led/led_button_blink.c"
-        "led/led_slew_sync.c"
+        "led/led_set_state.c"
+        "led/led_update.c"
+        "led/led_breathe_cb.c"
 
         "motors/motors_current_state.c"
         "motors/motors_disable.c"
@@ -209,5 +208,6 @@ idf_component_register(
         esp_timer
         nvs_flash
         esp_driver_gpio
+        esp_driver_ledc
         esp_driver_uart
 )

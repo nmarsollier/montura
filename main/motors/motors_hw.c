@@ -12,12 +12,15 @@
 
 #include "esp_log.h"
 #include "driver/gpio.h"
+#include "esp_err.h"
 #include "esp_rom_sys.h"
 #include "motors.h"
 #include "motors_internal.h"
 #include "tmc/tmc.h"
 
 #define MOTORS_ENABLE_GPIO GPIO_NUM_27
+
+static const char *TAG = "MOTORS_HW";
 #define RA_STEP_GPIO GPIO_NUM_26
 #define DEC_STEP_GPIO GPIO_NUM_25
 #define RA_DIR_GPIO  GPIO_NUM_33
@@ -69,7 +72,11 @@ esp_err_t motors_hw_init(void) {
     last_dir_dec = 0;
 
     motors_hw_enable();
-    tmc2209_hw_init();
+
+    esp_err_t tmc_result = tmc2209_hw_init();
+    if (tmc_result != ESP_OK) {
+        return tmc_result;
+    }
 
     return ESP_OK;
 }

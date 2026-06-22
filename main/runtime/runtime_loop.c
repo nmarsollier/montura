@@ -30,7 +30,7 @@ static void main_loop_task(void *arg) {
         }
 
         if (elapsed_inputs_ticks >= inputs_period_ticks) {
-            led_slew_sync();
+            led_update();
             elapsed_inputs_ticks = 0;
         }
 

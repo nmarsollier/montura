@@ -3,28 +3,39 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* External LED — GPIO 23, active HIGH. */
+/*
+ * LED states for the external indicator on GPIO 23.
+ *
+ * NORMAL  — dim brightness, mount idle.
+ * SLEWING — full brightness, mount in motion.
+ * ERROR   — breathing animation, permanent except for wifi recovery.
+ */
+typedef enum {
+    LED_STATE_NORMAL,
+    LED_STATE_SLEWING,
+    LED_STATE_ERROR
+} LedState;
 
+/* Initialise LEDC PWM on GPIO 23 and start in NORMAL (dim). */
 void led_init(void);
 
-/* Turn the external LED on.  duration_ms=0 stays on until led_external_off(). */
-void led_external_on(uint32_t duration_ms);
-
-void led_external_off(void);
+/*
+ * Request a state change.
+ *
+ * NORMAL <-> SLEWING transitions use a smooth 1-second hardware fade.
+ * Once ERROR is set the LED ignores further set_state calls.
+ */
+void led_set_state(LedState state);
 
 /*
- * Quick double-blink (500 ms on, 500 ms off, 500 ms on) for
- * physical button feedback.  Non-blocking — uses esp_timer.
+ * Clear ERROR and return to NORMAL with a fade.
+ * Called when wifi recovers after a connection failure.
+ * UART errors are never cleared (no code path calls this for them).
  */
-void led_button_blink(void);
-
-/* True while a blink sequence or timer-driven LED operation is in progress. */
-bool led_is_busy(void);
+void led_clear_error(void);
 
 /*
- * Sync the external LED to the current mount status.
- * ON while slewing (SLEWING status), OFF otherwise.
- * Does nothing while a blink / timer sequence is active.
- * Call periodically from the runtime loop.
+ * Periodic update, call every ~50 ms from the runtime loop.
+ * Reads mount status to switch between NORMAL and SLEWING when not in ERROR.
  */
-void led_slew_sync(void);
+void led_update(void);

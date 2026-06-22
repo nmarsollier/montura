@@ -15,9 +15,13 @@ N.I.N.A. and other clients can discover and control the mount directly.
 N.I.N.A. / ASCOM client
 Alpaca REST API  (port 11111)  ◄── also: UDP discovery on 32227
 REST API  (port 80)  ── serves embedded SPA at /
-  Mount  (service layer of orchestration, coordinates, settings)
+  Mount  (orchestration, coordinates, settings)
   Motors  (move / track)
   TMC2209 UART driver  (hardware config & microstep control)
+
+Network  (WiFi station + setup AP fallback)
+LED  (GPIO 23 PWM: dim / bright / breathing)
+Runtime  (init sequence + periodic loop)
 ```
 
 ## Hardware
@@ -26,7 +30,7 @@ REST API  (port 80)  ── serves embedded SPA at /
 - **Motor drivers**: 2× TMC2209 (UART, StealthChop, 128 µsteps)
 - **Motors**: 2× NEMA 17 (1.8° step, 1.4 A rated)
 - **Reduction**: 20-tooth motor pulley → 80-tooth axis pulley (4:1)
-- **LED**: External indicator LED (GPIO 23, active-high) + blue on-board LED (GPIO 2, active-high)
+- **LED**: PWM indicator (GPIO 23) — three states: dim (~10%) at idle, bright (100%) during slewing, slow breathing on error (WiFi / UART). On-board LED (GPIO 2) unused.
 
 ### Pin mapping
 
@@ -34,7 +38,7 @@ REST API  (port 80)  ── serves embedded SPA at /
 |------|-----------------|
 | 16   | TMC2209 UART RX |
 | 17   | TMC2209 UART TX |
-| 23   | Led Indicator   |
+| 23   | LED (PWM)       |
 | 25   | DEC STEP        |
 | 26   | RA STEP         |
 | 27   | MOTORS ENABLE   |

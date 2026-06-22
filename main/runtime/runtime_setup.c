@@ -12,6 +12,7 @@
 #include "motors.h"
 #include "mount.h"
 #include "network.h"
+#include "tmc.h"
 
 static const char *TAG = "RUNTIME_SETUP";
 
@@ -34,11 +35,26 @@ void setup_init(void) {
     network_start();
 
     led_init();
-    led_external_on(500);
+
+    /*
+     * WiFi error: setup AP running means home wifi didn't connect.
+     * Recoverable — a later successful connection calls led_clear_error().
+     */
+    if (network_is_setup_ap_started()) {
+        led_set_state(LED_STATE_ERROR);
+    }
 
     mount_init();
 
     motors_init();
-    
+
+    /*
+     * UART / TMC error: permanent in practice because no code path
+     * calls led_clear_error() for it — only a reboot resets it.
+     */
+    if (!tmc2209_is_initialized()) {
+        led_set_state(LED_STATE_ERROR);
+    }
+
     ESP_LOGI(TAG, "Mount ready");
 }

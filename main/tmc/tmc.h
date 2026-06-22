@@ -44,4 +44,10 @@ esp_err_t tmc2209_hw_init(void);
  */
 uint16_t tmc2209_get_active_microsteps(void);
 
+/*
+ * Query whether the TMC2209 UART and both axes were initialised
+ * successfully.  Used for error-state LED signalling.
+ */
+bool tmc2209_is_initialized(void);
+
 #endif

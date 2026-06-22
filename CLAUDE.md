@@ -151,7 +151,7 @@ Cliente Web (Alpine.js) → REST API → Mount (orquestacion) → Motors → TMC
 - **Motors** (`main/motors/`) — Control de motores de alto nivel.
 - **Motors Motion** (`main/motors_motion/`) — Ejecucion hardware: generacion de pulsos STEP/DIR.
 - **TMC** (`main/tmc/`) — Driver TMC2209 via UART. Unica fuente de verdad para configuracion de microsteps.
-
+- **LED** (`main/led/`) — Control PWM del LED externo en GPIO 23. Estados: tenue (normal), brillante (slewing), respiracion (error).
 - **Network** (`main/network/`) — Conectividad WiFi.
 - **Tools** (`main/tools/`) — Utilidades transversales (parser, validacion).
 
@@ -196,5 +196,6 @@ Cliente Web (Alpine.js) → REST API → Mount (orquestacion) → Motors → TMC
 - Motors puede llamar a Motors Motion
 - Motors Motion puede llamar a TMC
 - TMC no depende de ningun otro modulo del proyecto (solo del framework ESP-IDF)
+- LED puede llamar a Motors (lectura de estado) y TMC (consulta de inicializacion)
 - Screen es autocontenido y puede llamar a Mount
 - Tools es transversal: no depende de modulos de dominio ni es dependido por ellos
