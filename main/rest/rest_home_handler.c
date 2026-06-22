@@ -4,8 +4,6 @@
  */
 #include "rest.h"
 
-#include "buttons.h"
-
 esp_err_t rest_home_handler(httpd_req_t *request) {
     mount_home();
 

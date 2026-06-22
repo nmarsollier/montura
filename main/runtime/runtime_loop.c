@@ -7,7 +7,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "buttons.h"
 #include "led.h"
 
 /*
@@ -31,7 +30,6 @@ static void main_loop_task(void *arg) {
         }
 
         if (elapsed_inputs_ticks >= inputs_period_ticks) {
-            buttons_poll_inputs();
             led_slew_sync();
             elapsed_inputs_ticks = 0;
         }

@@ -8,7 +8,6 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "buttons.h"
 #include "led.h"
 #include "motors.h"
 #include "mount.h"
@@ -33,8 +32,6 @@ void setup_init(void) {
     ESP_ERROR_CHECK(nvs_result);
 
     network_start();
-
-    buttons_init();
 
     led_init();
     led_external_on(500);

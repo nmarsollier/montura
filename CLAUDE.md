@@ -89,12 +89,12 @@ V5   (5V USB, no usar)       CLK  (flash, no tocar)
 | Label placa | GPIO | Funcion           | Modulo        | Notas                          |
 |-------------|------|-------------------|---------------|--------------------------------|
 | 3V3         | —    | TMC VIO / MS1/MS2 | tmc           | Alimentacion logica 3.3V       |
-| GND (der)   | —    | TMC GND / Botones | tmc / buttons | Tierra comun                   |
+| GND (der)   | —    | TMC GND            | tmc           | Tierra comun                   |
 | GND (izq)   | —    | 12V GND externo   | motors        | Tierra de fuente de motores    |
 | G16         | 16   | TMC UART RX       | tmc           | UART2, single-wire bus         |
 | G17         | 17   | TMC UART TX       | tmc           | UART2, single-wire bus         |
-| G18         | 18   | STOP button       | buttons       | Input con pull-up interno      |
-| G19         | 19   | HOME button       | buttons       | Input con pull-up interno      |
+| G18         | 18   | STOP button       | —             | Input con pull-up interno      |
+| G19         | 19   | HOME button       | —             | Input con pull-up interno      |
 | G25         | 25   | DEC STEP          | motors_motion | Pulso STEP eje declinacion     |
 | G26         | 26   | RA STEP           | motors_motion | Pulso STEP eje ascension recta |
 | G27         | 27   | MOTORS ENABLE     | motors_motion | Enable global de ambos motores |
@@ -151,7 +151,7 @@ Cliente Web (Alpine.js) → REST API → Mount (orquestacion) → Motors → TMC
 - **Motors** (`main/motors/`) — Control de motores de alto nivel.
 - **Motors Motion** (`main/motors_motion/`) — Ejecucion hardware: generacion de pulsos STEP/DIR.
 - **TMC** (`main/tmc/`) — Driver TMC2209 via UART. Unica fuente de verdad para configuracion de microsteps.
-- **Buttons** (`main/buttons/`) — Manejo de botones fisicos.
+
 - **Network** (`main/network/`) — Conectividad WiFi.
 - **Tools** (`main/tools/`) — Utilidades transversales (parser, validacion).
 
@@ -196,5 +196,5 @@ Cliente Web (Alpine.js) → REST API → Mount (orquestacion) → Motors → TMC
 - Motors puede llamar a Motors Motion
 - Motors Motion puede llamar a TMC
 - TMC no depende de ningun otro modulo del proyecto (solo del framework ESP-IDF)
-- Buttons y Screen son autocontenidos y pueden llamar a Mount
+- Screen es autocontenido y puede llamar a Mount
 - Tools es transversal: no depende de modulos de dominio ni es dependido por ellos

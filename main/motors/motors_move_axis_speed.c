@@ -2,7 +2,7 @@
  *
  * Purpose: request continuous single-axis speed motion.
  * Positive rate = forward, negative = reverse, zero = stop that axis.
- * Used by Alpaca MoveAxis, physical buttons, joystick, and guiding.
+ * Used by Alpaca MoveAxis, joystick, and guiding.
  */
 #include "motors.h"
 #include "motors_internal.h"

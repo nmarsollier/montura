@@ -2,10 +2,6 @@ idf_component_register(
         SRCS
         "main.c"
 
-        "buttons/buttons_hw.c"
-        "buttons/buttons_poll.c"
-        "buttons/buttons_stop_handler.c"
-
         "led/led_init.c"
         "led/led_external_on.c"
         "led/led_external_off.c"
@@ -196,7 +192,6 @@ idf_component_register(
         "rest"
         "rest_alpaca"
         "motors"
-        "buttons"
         "runtime"
         "utils"
         "udp_alpaca"

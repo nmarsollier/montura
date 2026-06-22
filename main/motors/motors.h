@@ -106,7 +106,7 @@ MotorResultCode motors_start_tracking(TrackingMode mode);
  * Move one or both axes continuously at the given rates in deg/s.
  * Positive = forward, negative = reverse, zero = stop that axis.
  * Both zero is equivalent to STOP.  Used by Alpaca MoveAxis and
- * manual controls (buttons, joystick).
+ * manual controls (joystick).
  */
 void motors_set_move_axis_speed(float ra_speed, float dec_speed);
 

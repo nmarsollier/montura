@@ -26,8 +26,7 @@ REST API  (port 80)  ── serves embedded SPA at /
 - **Motor drivers**: 2× TMC2209 (UART, StealthChop, 128 µsteps)
 - **Motors**: 2× NEMA 17 (1.8° step, 1.4 A rated)
 - **Reduction**: 20-tooth motor pulley → 80-tooth axis pulley (4:1)
-- **Buttons**: STOP (GPIO 18), HOME (GPIO 19) — active-low with internal pull-ups
-- **LED**: Blue on-board LED (GPIO 2, active-high)
+- **LED**: External indicator LED (GPIO 23, active-high) + blue on-board LED (GPIO 2, active-high)
 
 ### Pin mapping
 
@@ -35,8 +34,6 @@ REST API  (port 80)  ── serves embedded SPA at /
 |------|-----------------|
 | 16   | TMC2209 UART RX |
 | 17   | TMC2209 UART TX |
-| 18   | HOME button     |
-| 19   | STOP button     |
 | 23   | Led Indicator   |
 | 25   | DEC STEP        |
 | 26   | RA STEP         |
