@@ -11,14 +11,9 @@
  * ESP32 UART port used to communicate with both TMC2209 drivers.
  * UART_NUM_2 is chosen because UART_NUM_0 is the debug console and
  * UART_NUM_1 may be in use by other peripherals.
- *
- * SINGLE-WIRE BUS: the TMC2209 PDN_UART pin connects through a series
- * resistor to both ESP32 TX (GPIO 17) and ESP32 RX (GPIO 16).
- * The TX pad is configured as open-drain with internal pull-up so the
- * ESP32 only pulls the line LOW; when it releases, the TMC2209 can
- * drive the response without the ESP32 TX output stage fighting it.
  */
 #define TMC_UART_NUM          UART_NUM_2
+#define TMC_BAUD_RATE         115200
 
 /*
  * TMC2209 UART GPIO pins (separate ESP32 pads, shorted at the TMC side).
@@ -26,31 +21,8 @@
  * Both connect to the same PDN_UART pin on the TMC2209 via a series
  * resistor on the TX leg.
  */
-#define TMC_UART_TX_GPIO      GPIO_NUM_17
-#define TMC_UART_RX_GPIO      GPIO_NUM_16
-
-/*
- * TMC2209 UART baud rate.
- * 115200 bps is the manufacturer-recommended value for reliable
- * driver communication. The TMC2209 supports up to 500 kbps,
- * but 115200 offers the best balance between speed and stability
- * over longer cables.
- */
-#define TMC_BAUD_RATE         115200
-
-/*
- * UART addresses of the two axes on the TMC2209 bus.
- * Each TMC2209 driver has an 8-bit address configurable via the
- * MS1/MS2 pins (ADD0/ADD1 on TMC2209).
- *
- *   TMC_ADDR_RA  = 0x00 — Right Ascension axis
- *   TMC_ADDR_DEC = 0x03 — Declination axis
- *
- * Address 0x00 is obtained with ADD0=0, ADD1=0.
- * Address 0x03 is obtained with ADD0=1, ADD1=1.
- */
-#define TMC_ADDR_RA           0x00
-#define TMC_ADDR_DEC          0x03
+#define ESP_UART_TX_GPIO      GPIO_NUM_17
+#define ESP_UART_RX_GPIO      GPIO_NUM_16
 
 /*
  * TMC2209 internal registers accessible via UART.
@@ -89,39 +61,6 @@
 #define TMC_TARGET_MICROSTEPS 128
 
 /*
- * Motor current configuration (IHOLD_IRUN register, addr 0x10).
- *
- * The TMC2209 uses the IHOLD_IRUN register to control motor current
- * through three fields:
- *
- *   IHOLD      (bits 0-4)   — Hold current (motor stopped)
- *   IRUN       (bits 16-20) — Run current (motor moving)
- *   IHOLDDELAY (bits 8-11)  — IRUN-to-IHOLD transition delay
- *
- * RMS current calculation formula:
- *
- *   I_RMS = (register_value / 32) * I_MAX_DRIVER
- *
- * where I_MAX_DRIVER is the driver's maximum current determined by
- * the sense resistor (Rsense). For a typical NEMA 17 with Rsense=0.11 Ohm:
- *
- *   I_MAX_DRIVER = 0.22 V / 0.11 Ohm = 2.0 A (peak)
- *   I_MAX_RMS    = 2.0 A / sqrt(2) = 1.41 A RMS
- *
- * With IRUN = 14:  I_RMS = (14/32) * 1.41 A = 617 mA RMS
- * With IHOLD = 6:  I_RMS = (6/32) * 1.41 A = 264 mA RMS
- *
- * Increased from 6/14 to handle extra load (guidescope + counterweight).
- * At 22/32 the driver delivers ~970 mA RMS — still well within the
- * motor's 1.4 A rating and the TMC2209's thermal limits.
- *
- * Reference: TMC2209 datasheet, Table 8.40 (IHOLD_IRUN).
- */
-#define TMC_IHOLD      16   /* Hold current:  ~705 mA RMS */
-#define TMC_IRUN       25   /* Run current:   ~970 mA RMS */
-#define TMC_IHOLDDELAY  1   /* Standard IRUN->IHOLD delay */
-
-/*
  * Bit masks for the TMC2209 GCONF register.
  * Reference: TMC2209 datasheet, Table 8.1 (GCONF).
  *
@@ -147,21 +86,32 @@ static const char *TAG = "TMC_INIT";
 
 /*
  * Logical representation of a mount axis.
- * Each instance associates a human-readable name with the UART address
- * of the TMC2209 driver that controls that axis.
  *
- *   name    — Axis identifier: "RA" (Right Ascension) or "DEC" (Declination)
- *   address — 8-bit UART address of the TMC2209 on the single-wire bus
- *             (see TMC_ADDR_RA and TMC_ADDR_DEC)
+ *   name    — "RA" or "DEC"
+ *   address — UART address on the single-wire bus (RA=0x00, DEC=0x03)
+ *   irun    — run current value (0-31)
+ *   ihold   — hold current value (0-31)
  */
 typedef struct {
     const char *name;
     uint8_t address;
+    uint8_t irun;
+    uint8_t ihold;
 } TmcAxis;
 
 static const TmcAxis tmc_axes[] = {
-    {.name = "RA", .address = TMC_ADDR_RA},
-    {.name = "DEC", .address = TMC_ADDR_DEC},
+    {
+        .name = "RA",
+        .address = 0x00,
+        .irun = 30, /* ~1.32 A RMS (42x40mm, 1.5A rated) */
+        .ihold = 16 /* ~0.75 A RMS (42x40mm, 1.5A rated) */
+    },
+    {
+        .name = "DEC",
+        .address = 0x03,
+        .irun = 25, /* ~1.10 A RMS */
+        .ihold = 16 /* ~0.75 A RMS */
+    },
 };
 
 static uint8_t tmc_crc(const uint8_t *data, size_t len) {
@@ -318,7 +268,7 @@ static esp_err_t tmc_write_register(uint8_t address, uint8_t reg, uint32_t value
 
     uart_wait_tx_done(TMC_UART_NUM, pdMS_TO_TICKS(10));
 
-    // ABSORB ECHO: Read back the 8 written bytes to fully flush the receiver FIFO
+    /* Absorb the 8-byte echo from the single-wire bus. */
     uint8_t echo_buffer[8];
     uart_read_bytes(TMC_UART_NUM, echo_buffer, sizeof(request), pdMS_TO_TICKS(10));
 
@@ -362,7 +312,7 @@ static esp_err_t tmc_set_microsteps(const TmcAxis *axis, uint16_t microsteps) {
         return result;
     }
 
-    // 2. Clear the old MRES mask (bits 24-27) and inject the new value
+    // 1. Clear the old MRES mask (bits 24-27) and inject the new value
     uint32_t updated = (chopconf & ~(0x0FU << 24)) | ((uint32_t) mres << 24);
 
     // =========================================================================
@@ -379,14 +329,14 @@ static esp_err_t tmc_set_microsteps(const TmcAxis *axis, uint16_t microsteps) {
 
     ESP_LOGI(TAG, "%s: Applying CHOPCONF (MRES=%u, SpreadCycle=ON, Intpol=ON)", axis->name, mres);
 
-    // 3. Write the optimised CHOPCONF register to the driver
+    // 2. Write the optimised CHOPCONF register to the driver
     result = tmc_write_register(axis->address, TMC_REG_CHOPCONF, updated);
     if (result != ESP_OK) {
         ESP_LOGW(TAG, "%s failed writing CHOPCONF: %s", axis->name, esp_err_to_name(result));
         return result;
     }
 
-    // 4. Hardware latch verification and validation
+    // 3. Hardware latch verification and validation
     uint32_t verify_chopconf = 0;
     uint16_t verify_microsteps = 0;
 
@@ -440,10 +390,10 @@ static esp_err_t tmc_init_driver(const TmcAxis *axis) {
     result = tmc_write_register(axis->address, TMC_REG_GCONF, gconf);
     if (result != ESP_OK) return result;
 
-    // 4. Configure motor current using the constants defined above
-    uint32_t ihold_irun_val = (uint32_t) TMC_IHOLD |
-                              ((uint32_t) TMC_IHOLDDELAY << 8) |
-                              ((uint32_t) TMC_IRUN << 16);
+    // 4. Configure motor current (per-axis IRUN and IHOLD)
+    uint32_t ihold_irun_val = (uint32_t) axis->ihold |
+                              (1U << 8) | /* IHOLDDELAY = 1 */
+                              ((uint32_t) axis->irun << 16);
 
     result = tmc_write_register(axis->address, TMC_REG_IHOLD_IRUN, ihold_irun_val);
     if (result != ESP_OK) return result;
@@ -529,7 +479,7 @@ esp_err_t tmc2209_hw_init(void) {
      * and restores it to UART-controlled output afterwards.
      */
     result = uart_set_pin(TMC_UART_NUM,
-                          TMC_UART_TX_GPIO, TMC_UART_RX_GPIO,
+                          ESP_UART_TX_GPIO, ESP_UART_RX_GPIO,
                           UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     if (result != ESP_OK) return result;
 
@@ -538,7 +488,7 @@ esp_err_t tmc2209_hw_init(void) {
      * has a defined idle level when neither the ESP32 nor the TMC2209 is
      * driving it.
      */
-    gpio_set_pull_mode(TMC_UART_RX_GPIO, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(ESP_UART_RX_GPIO, GPIO_PULLUP_ONLY);
 
     // Initialisation loop for RA and DEC axes
     for (size_t i = 0; i < sizeof(tmc_axes) / sizeof(tmc_axes[0]); i++) {
